@@ -389,7 +389,7 @@ int folder_unmount(std::string const& path_in, bool force, std::string& message,
     bool const ext = volume_fs(root).device.compare(0, 7, "/dev/es") == 0; // the console's extended storage: only the system may disconnect it
     if (ext && force)
     {
-        message = ps5tm_tr("mr_um_ext_force");
+        message = ps5tm_tr("mr_um_ext_fail", { root });
         return 2;
     }
     UnmountPlan const up = unmount_plan_parts(root);
@@ -462,7 +462,8 @@ int folder_unmount(std::string const& path_in, bool force, std::string& message,
             }
             if (ext || rc == EBUSY)
             {
-                message = ps5tm_tr(rc == EBUSY ? "mr_um_busy" : "mr_um_sys_fail", { root, errno_text(rc) + (native != 0 ? std::string{ " (" } + hex + ")" : std::string{}) });
+                // whatever the reason (not listed, busy, an error), the answer for the user is the same: do it with the console itself; the details are in the log above
+                message = ps5tm_tr("mr_um_ext_fail", { root });
                 ps5tm_journal_add(message.c_str(), 2);
                 return 2;
             }
@@ -471,7 +472,7 @@ int folder_unmount(std::string const& path_in, bool force, std::string& message,
     }
     else if (ext)
     {
-        message = ps5tm_tr("mr_um_ext"); // no way to ask the system: the extended storage is left alone (an ordinary unmount makes the console think the drive was removed wrongly)
+        message = ps5tm_tr("mr_um_ext_fail", { root }); // no way to ask the system: the extended storage is left alone (an ordinary unmount makes the console think the drive was removed wrongly)
         return 2;
     }
     if (!disconnected)

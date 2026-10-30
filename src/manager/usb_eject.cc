@@ -247,8 +247,16 @@ int call(IpmiApi const& api, Client& c, std::uint32_t method, IpmiInput const* i
     return native_error(native);
 }
 
+// What the system answered, for the log: how many devices it lists and the mount point of each (when a drive is "not found", this shows what the system calls it).
+void trace_add(std::string& trace, char const* fmt, std::uint32_t id, char const* text)
+{
+    char buf[200];
+    std::snprintf(buf, sizeof(buf), fmt, static_cast<unsigned>(id), text);
+    trace += buf;
+}
+
 // The sequence itself: list the devices, find the one that has our mount point, eject it once (a failed eject is never repeated).
-int eject_sequence(std::string const& path, std::int32_t& native)
+int eject_sequence(std::string const& path, std::int32_t& native, std::string& trace)
 {
     IpmiApi api;
     if (!load_api(api))
@@ -269,6 +277,7 @@ int eject_sequence(std::string const& path, std::int32_t& native)
         {
             status = EIO;
         }
+        trace += status == 0 ? "the system lists " + std::to_string(count) + " device(s)" : "the list of devices failed";
         if (status == 0)
         {
             status = ENOENT;
@@ -288,6 +297,14 @@ int eject_sequence(std::string const& path, std::int32_t& native)
                     status = EIO;
                     break;
                 }
+                for (char& ch : mount_point)
+                {
+                    if (ch != 0 && (ch < 32 || ch > 126))
+                    {
+                        ch = '?'; // only for the log
+                    }
+                }
+                trace_add(trace, "; id %u mounted at '%s'", ids[i], mount_point);
                 if (path != mount_point)
                 {
                     status = ENOENT;
@@ -317,6 +334,7 @@ struct EjectJob
     bool done = false;
     int status = EIO;
     std::int32_t native = 0;
+    std::string trace;
 };
 
 int usb_system_eject(std::string const& path, int& native_status)
@@ -338,10 +356,12 @@ int usb_system_eject(std::string const& path, int& native_status)
         [job, path]
         {
             std::int32_t native = 0;
-            int const status = eject_sequence(path, native);
+            std::string trace;
+            int const status = eject_sequence(path, native, trace);
             std::lock_guard<std::mutex> const lock{ job->m };
             job->status = status;
             job->native = native;
+            job->trace = trace;
             job->done = true;
             job->cv.notify_all();
         })
@@ -355,7 +375,7 @@ int usb_system_eject(std::string const& path, int& native_status)
     }
     std::remove(EjectProbeFile);
     native_status = job->native;
-    shim_log("usb eject: %s: status %d, native 0x%08x", path.c_str(), job->status, static_cast<unsigned>(job->native));
+    shim_log("usb eject: %s: status %d, native 0x%08x; %s", path.c_str(), job->status, static_cast<unsigned>(job->native), job->trace.c_str());
     return job->status;
 }
 

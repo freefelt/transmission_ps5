@@ -842,7 +842,5 @@
 "{1} PB" = "{1} PB"
 
 // ---- Extended storage: unmounting is not available.
-"mr_um_ext" = "The console’s extended storage can be disconnected only through the system, and that is not available now: disconnect it with the console itself (Settings → Storage, “Safely remove from PS5”)."
-"mr_um_ext_force" = "The console’s extended storage cannot be ejected by force: close the games and apps that use it and try again, or disconnect it with the console itself (Settings → Storage, “Safely remove from PS5”)."
-"mr_um_sys_fail" = "The system could not disconnect {1}: {2}. Close the games and apps that use the drive and try again."
+"mr_um_ext_fail" = "Could not eject {1}. Please eject it with the console itself: Settings → Storage → your drive → “Safely remove from PS5” (close the games and apps that use it first)."
 "mr_um_ok_ext" = "The console’s extended storage {1} was disconnected by the system. Torrents stopped: {2}. Games and apps stored on it are unavailable until you connect the drive again."

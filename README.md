@@ -112,7 +112,7 @@ Without a folder Transmission **refuses** to add torrents. This is on purpose: i
 
 - **Best disk:** the M.2 SSD, or a USB disk that you formatted **with the console** as "extended storage".
 - **exFAT and FAT32 disks** work, but only with the **USB disk fix** (it is on by default for them). Without it a big torrent can freeze the whole console. The picker shows a red "not recommended" next to such disks.
-- **Do not pull a USB disk out** while torrents are running. Use the eject button (**Unmount the drive**) next to the folder on the settings page (not available for extended storage: use "Safely remove from PS5" in the console settings).
+- **Do not pull a USB disk out** while torrents are running. Use the eject button (**Unmount the drive**) next to the folder on the settings page (for the console's extended storage it may refuse: then use "Safely remove from PS5" in the console settings).
 - **No password.** The settings page and the web interface are open to everyone in your home network, which is fine at home. Do not forward their ports to the internet.
 - **Tested on firmware 11.20.** On 10.01 it starts and downloads a torrent (a user's report). If you try another one, please tell us how it went (open an issue).
 
