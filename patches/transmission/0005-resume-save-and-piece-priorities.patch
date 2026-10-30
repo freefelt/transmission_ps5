@@ -1,0 +1,84 @@
+Subject: save torrent state sooner; no piece priority boost at file ends
+
+ 1) peer-mgr-wishlist.cc: in sequential mode the 'last piece first' rule is removed
+    (it stretched the file to its full size at once)
+ 2) session.cc: torrent state (resume files, which hold the torrent folder) is saved every
+    20 s instead of every 360 s
+ 3) file-piece-map.cc: no priority boost for the pieces where a file starts or ends
+ 4) rpcimpl.cc: the state of a new torrent is saved immediately on add; before, a forced
+    daemon restart in the first minutes returned the torrent to the default folder
+
+---
+diff --git a/libtransmission/file-piece-map.cc b/libtransmission/file-piece-map.cc
+index b7908d1..59351a6 100644
+--- a/libtransmission/file-piece-map.cc
++++ b/libtransmission/file-piece-map.cc
+@@ -185,13 +185,9 @@ tr_priority_t tr_file_priorities::file_priority(tr_file_index_t const file) cons
+ 
+ tr_priority_t tr_file_priorities::piece_priority(tr_piece_index_t const piece) const
+ {
+-    // increase priority if a file begins or ends in this piece
+-    // because that makes life easier for code/users using at incomplete files.
+-    // Xrefs: f2daeb242, https://forum.transmissionbt.com/viewtopic.php?t=10473
+-    if (fpm_->is_edge_piece(piece))
+-    {
+-        return TR_PRI_HIGH;
+-    }
++    // PS5 guard v4: the priority boost for the pieces where a file starts or ends is removed. Because of it the last piece of EVERY file was requested at once,
++    // and all files were stretched to their full size at the very start of the download; on exFAT/FAT32 (no sparse files) that is a fill
++    // with zeroes that takes minutes (35 GB: 9 minutes, the whole console hung). The boost is only needed to preview files that are not finished.
+ 
+     // check the priorities of the files that touch this piece
+     if (auto const [begin_file, end_file] = fpm_->file_span_for_piece(piece); end_file <= std::size(priorities_))
+diff --git a/libtransmission/peer-mgr-wishlist.cc b/libtransmission/peer-mgr-wishlist.cc
+index 5cb5732..f4354c2 100644
+--- a/libtransmission/peer-mgr-wishlist.cc
++++ b/libtransmission/peer-mgr-wishlist.cc
+@@ -334,17 +334,13 @@ private:
+             return salter_();
+         }
+ 
+-        // Download first and last piece first
++        // PS5 guard v4: only the first piece goes first. "Last piece first" is removed: writing it to the end of the file stretches the file to its full
++        // size at once, and on exFAT/FAT32 (no sparse files) that is a fill with zeroes that takes minutes (35 GB: 9 minutes, the whole console hung).
+         if (piece == 0U)
+         {
+             return 0U;
+         }
+ 
+-        if (piece == n_pieces - 1U)
+-        {
+-            return 1U;
+-        }
+-
+         if (sequential_download_from_piece <= 1)
+         {
+             return piece + 1U;
+diff --git a/libtransmission/rpcimpl.cc b/libtransmission/rpcimpl.cc
+index 2b89327..e058962 100644
+--- a/libtransmission/rpcimpl.cc
++++ b/libtransmission/rpcimpl.cc
+@@ -1695,6 +1695,9 @@ void add_torrent_impl(struct tr_rpc_idle_data* data, tr_ctor& ctor)
+         return;
+     }
+ 
++    // PS5 guard v4: the state (it holds the folder the torrent was added to) is saved at once, not after 6 minutes: a forced restart must not lose the path.
++    tor->save_resume_file();
++
+     data->session->rpcNotify(TR_RPC_TORRENT_ADDED, tor);
+     data->args_out.try_emplace(
+         TR_KEY_torrent_added,
+diff --git a/libtransmission/session.cc b/libtransmission/session.cc
+index eadb60d..7d48459 100644
+--- a/libtransmission/session.cc
++++ b/libtransmission/session.cc
+@@ -2212,7 +2212,8 @@ void tr_sessionClearStats(tr_session* session)
+ namespace
+ {
+ auto constexpr QueueInterval = 1s;
+-auto constexpr SaveInterval = 360s;
++// PS5 guard v4: the state of the torrents (it holds the folder of the torrent) is saved every 20 s, not every 6 minutes: a forced restart of the daemon must not lose the path.
++auto constexpr SaveInterval = 20s;
+ 
+ auto makeResumeDir(std::string_view config_dir)
+ {

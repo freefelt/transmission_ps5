@@ -1,0 +1,162 @@
+Subject: guard: download folders allow-list in the RPC layer
+
+Hooks (the logic lives in the daemon wrapper, ps5tm_guard_* functions) in rpcimpl.cc:
+ - torrent-add: the folder must be in the allow-list; without a folder the default one is used
+ - torrent-set-location: the destination must be in the list; if the disk of the torrent is
+   not mounted the move is refused
+ - session-get/session-set: default folder and download-dir check
+ - the temporary (incomplete) folder is forbidden completely
+
+---
+diff --git a/libtransmission/rpcimpl.cc b/libtransmission/rpcimpl.cc
+index a78462a..2b89327 100644
+--- a/libtransmission/rpcimpl.cc
++++ b/libtransmission/rpcimpl.cc
+@@ -51,6 +51,13 @@
+ using namespace std::literals;
+ using namespace libtransmission::Values;
+ 
++// PS5 guard v1: protection of the download folders. The functions live in the daemon wrapper (src/daemon/guard.c); 0 = allowed, otherwise msg holds the error text.
++extern "C" int ps5tm_guard_check_add(char const* requested, char const* session_dir, char* resolved, size_t resolved_size, char* msg, size_t msg_size);
++extern "C" int ps5tm_guard_check_location(char const* location, char* msg, size_t msg_size);
++extern "C" int ps5tm_guard_check_source(char const* dir, char* msg, size_t msg_size);
++extern "C" int ps5tm_guard_check_session_dir(char const* path, int kind, char* msg, size_t msg_size);
++extern "C" int ps5tm_guard_default_dir(char const* session_dir, char* out, size_t out_size);
++
+ namespace JsonRpc
+ {
+ // https://www.jsonrpc.org/specification#error_object
+@@ -1419,6 +1426,23 @@ namespace make_torrent_field_helpers
+         return { Error::PATH_NOT_ABSOLUTE, "new location path is not absolute"s };
+     }
+ 
++    // PS5 guard v1: a torrent can only be moved to a folder from the download folders list; if the disk of the torrent is not connected, it cannot be moved
++    {
++        char ps5_msg[512] = { 0 };
++        std::string const ps5_location{ *location };
++        if (ps5tm_guard_check_location(ps5_location.c_str(), ps5_msg, sizeof(ps5_msg)) != 0)
++        {
++            return { Error::INVALID_PARAMS, std::string{ ps5_msg } };
++        }
++        for (auto* tor : getTorrents(session, args_in))
++        {
++            if (ps5tm_guard_check_source(tor->current_dir().c_str(), ps5_msg, sizeof(ps5_msg)) != 0)
++            {
++                return { Error::INVALID_PARAMS, std::string{ ps5_msg } };
++            }
++        }
++    }
++
+     auto const move_flag = args_in.value_if<bool>(TR_KEY_move).value_or(false);
+     for (auto* tor : getTorrents(session, args_in))
+     {
+@@ -1770,9 +1794,18 @@ void torrentAdd(tr_session* session, tr_variant::Map const& args_in, tr_rpc_idle
+ 
+     auto const cookies = args_in.value_if<std::string_view>(TR_KEY_cookies).value_or(""sv);
+ 
+-    if (download_dir && !std::empty(*download_dir))
++    // PS5 guard v1: a torrent is only added to a folder from the download folders list; without a folder the default folder is used
+     {
+-        ctor.set_download_dir(TR_FORCE, *download_dir);
++        std::string const ps5_requested = download_dir ? std::string{ *download_dir } : std::string{};
++        std::string const ps5_session_dir{ session->downloadDir() };
++        char ps5_resolved[1024] = { 0 };
++        char ps5_msg[512] = { 0 };
++        if (ps5tm_guard_check_add(ps5_requested.c_str(), ps5_session_dir.c_str(), ps5_resolved, sizeof(ps5_resolved), ps5_msg, sizeof(ps5_msg)) != 0)
++        {
++            tr_rpc_idle_done(idle_data, Error::INVALID_PARAMS, std::string_view{ ps5_msg });
++            return;
++        }
++        ctor.set_download_dir(TR_FORCE, ps5_resolved);
+     }
+ 
+     if (auto const val = args_in.value_if<bool>(TR_KEY_paused))
+@@ -2225,15 +2258,32 @@ using SessionAccessors = std::pair<SessionGetter, SessionSetter>;
+ 
+     map.try_emplace(
+         TR_KEY_download_dir,
+-        [](tr_session const& src) -> tr_variant { return src.downloadDir(); },
++        [](tr_session const& src) -> tr_variant
++        {
++            // PS5 guard v1: "Download to" shows the default folder from the download folders list
++            std::string const ps5_current{ src.downloadDir() };
++            char ps5_dir[1024] = { 0 };
++            if (ps5tm_guard_default_dir(ps5_current.c_str(), ps5_dir, sizeof(ps5_dir)) == 0)
++            {
++                return std::string{ ps5_dir };
++            }
++            return src.downloadDir();
++        },
+         [](tr_session& tgt, tr_variant const& src, ErrorInfo& err)
+         {
+             if (auto const download_dir = src.value_if<std::string_view>())
+             {
++                // PS5 guard v1: only a folder from the download folders list can be chosen as the default folder
++                char ps5_msg[512] = { 0 };
++                std::string const ps5_path{ *download_dir };
+                 if (tr_sys_path_is_relative(*download_dir))
+                 {
+                     err = { JsonRpc::Error::PATH_NOT_ABSOLUTE, "download directory path is not absolute"s };
+                 }
++                else if (!std::empty(*download_dir) && ps5tm_guard_check_session_dir(ps5_path.c_str(), 0, ps5_msg, sizeof(ps5_msg)) != 0)
++                {
++                    err = { JsonRpc::Error::INVALID_PARAMS, std::string{ ps5_msg } };
++                }
+                 else if (!std::empty(*download_dir))
+                 {
+                     tgt.setDownloadDir(*download_dir);
+@@ -2244,7 +2294,16 @@ using SessionAccessors = std::pair<SessionGetter, SessionSetter>;
+     map.try_emplace(
+         TR_KEY_download_dir_free_space,
+         [](tr_session const& src) -> tr_variant
+-        { return tr_sys_path_get_capacity(src.downloadDir()).value_or(tr_sys_path_capacity{}).free; },
++        {
++            // PS5 guard v1: free space of the default folder (what "Download to" shows)
++            std::string ps5_dir{ src.downloadDir() };
++            char ps5_buf[1024] = { 0 };
++            if (ps5tm_guard_default_dir(ps5_dir.c_str(), ps5_buf, sizeof(ps5_buf)) == 0)
++            {
++                ps5_dir = ps5_buf;
++            }
++            return tr_sys_path_get_capacity(ps5_dir).value_or(tr_sys_path_capacity{}).free;
++        },
+         nullptr);
+ 
+     map.try_emplace(
+@@ -2309,6 +2368,13 @@ using SessionAccessors = std::pair<SessionGetter, SessionSetter>;
+         {
+             if (auto const dir = src.value_if<std::string_view>())
+             {
++                // PS5 guard v1: the temporary folder is disabled and cannot be changed
++                char ps5_msg[512] = { 0 };
++                if (ps5tm_guard_check_session_dir("", 1, ps5_msg, sizeof(ps5_msg)) != 0)
++                {
++                    err = { JsonRpc::Error::INVALID_PARAMS, std::string{ ps5_msg } };
++                    return;
++                }
+                 if (tr_sys_path_is_relative(*dir))
+                 {
+                     err = { JsonRpc::Error::PATH_NOT_ABSOLUTE, "incomplete torrents directory path is not absolute"s };
+@@ -2323,11 +2389,20 @@ using SessionAccessors = std::pair<SessionGetter, SessionSetter>;
+     map.try_emplace(
+         TR_KEY_incomplete_dir_enabled,
+         [](tr_session const& src) -> tr_variant { return src.useIncompleteDir(); },
+-        [](tr_session& tgt, tr_variant const& src, ErrorInfo& /*err*/)
++        [](tr_session& tgt, tr_variant const& src, ErrorInfo& err)
+         {
+             if (auto const val = src.value_if<bool>())
+             {
+-                tgt.useIncompleteDir(*val);
++                // PS5 guard v1: "Use temporary folder" cannot be turned on (it can be turned off)
++                char ps5_msg[512] = { 0 };
++                if (*val && ps5tm_guard_check_session_dir("", 2, ps5_msg, sizeof(ps5_msg)) != 0)
++                {
++                    err = { JsonRpc::Error::INVALID_PARAMS, std::string{ ps5_msg } };
++                }
++                else
++                {
++                    tgt.useIncompleteDir(*val);
++                }
+             }
+         });
+ 

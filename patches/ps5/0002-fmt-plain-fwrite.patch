@@ -1,0 +1,21 @@
+Subject: fmt: write to FILE* with plain fwrite
+
+The fast path of fmt for writing to a FILE* reaches into internal fields of the FILE struct
+(_p, _w, _bf), assuming the layout from the SDK headers. The console runs Sony's libc with a
+different layout: fmt corrupts memory and the daemon crashes on the first log write.
+Always use plain fwrite instead.
+
+---
+diff --git a/third-party/fmt/include/fmt/format-inl.h b/third-party/fmt/include/fmt/format-inl.h
+index 945cb91..c696810 100644
+--- a/third-party/fmt/include/fmt/format-inl.h
++++ b/third-party/fmt/include/fmt/format-inl.h
+@@ -1735,7 +1735,7 @@ FMT_FUNC void vprint_buffered(std::FILE* f, string_view fmt, format_args args) {
+ }
+ 
+ FMT_FUNC void vprint(std::FILE* f, string_view fmt, format_args args) {
+-  if (!detail::file_ref(f).is_buffered() || !detail::has_flockfile<>())
++  if (true /* PS5: libc Sony has another FILE layout than the SDK headers; use plain fwrite */)
+     return vprint_buffered(f, fmt, args);
+   auto&& buffer = detail::file_print_buffer<>(f);
+   return detail::vformat_to(buffer, fmt, args);

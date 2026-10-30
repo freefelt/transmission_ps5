@@ -1,0 +1,38 @@
+const puppeteer = require("puppeteer-core");
+const http = require("http");
+let pass = 0, fail = 0; const check = (n, ok, e) => { (ok ? pass++ : fail++); console.log((ok ? "PASS " : "FAIL ") + n + (e !== undefined ? "  -> " + String(e).slice(0, 300) : "")); };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const post = (path, body) => new Promise((res) => { const d = JSON.stringify(body), q = http.request({ host: "127.0.0.1", port: 9092, path, method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(d) } }, (r) => { let t = ""; r.on("data", (c) => (t += c)); r.on("end", () => res([r.statusCode, t])); }); q.write(d); q.end(); });
+function ben(v) { if (typeof v === "number") return Buffer.from(`i${v}e`); if (typeof v === "string") return Buffer.concat([Buffer.from(`${Buffer.byteLength(v)}:`), Buffer.from(v)]); if (Buffer.isBuffer(v)) return Buffer.concat([Buffer.from(`${v.length}:`), v]); if (Array.isArray(v)) return Buffer.concat([Buffer.from("l"), ...v.map(ben), Buffer.from("e")]); return Buffer.concat([Buffer.from("d"), ...Object.keys(v).sort().flatMap((k) => [ben(k), ben(v[k])]), Buffer.from("e")]); }
+// Transmission web client (port 9091) in Chrome: icons and indentation of the inspector file tree, the width of the "Add torrents" window, the label of an exFAT disk tile, the gap at "Show"; in Russian and English
+(async () => {
+  const meta = ben({ announce: "http://127.0.0.1:1/announce", info: { name: "GRoot", "piece length": 65536, pieces: Buffer.alloc(60, 7), files: [{ length: 65536, path: ["a.bin"] }, { length: 65536, path: ["sub", "b.bin"] }, { length: 65536, path: ["sub", "deep", "c.bin"] }] } }).toString("base64");
+  for (const p of ["/mnt/usb2/torrents", "/mnt/ext1/torrents"]) await post("/api/folders", { action: "add", path: p, confirm: true });
+  const browser = await puppeteer.launch({ executablePath: require("./chrome"), args: ["--no-sandbox", "--disable-gpu"], headless: "new" });
+  const page = await browser.newPage(); await page.setViewport({ width: 1100, height: 800 }); const errors = []; page.on("pageerror", (e) => errors.push(e.message)); page.on("dialog", (d) => d.dismiss());
+  const open = async () => { await page.goto("http://127.0.0.1:9091/transmission/web/", { waitUntil: "networkidle2" }); await sleep(2200); };
+  const rpcAdd = () => page.evaluate(async (m) => { const url = "/transmission/rpc"; let sid = ""; for (let i = 0; i < 2; i++) { const r = await fetch(url, { method: "POST", headers: { "X-Transmission-Session-Id": sid }, body: JSON.stringify({ method: "torrent-add", arguments: { metainfo: m, "download-dir": "/mnt/ext1/torrents", paused: true } }) }); if (r.status === 409) { sid = r.headers.get("X-Transmission-Session-Id"); continue; } return r.status; } return 0; }, meta);
+  await post("/api/config", { language: "en" }); await sleep(1500); await open(); const st = await rpcAdd();
+  for (const [lang, ofRe, label] of [["en", /(^|\s)of(\s|$)/, "EN"], ["ru", /(^|\s)из(\s|$)/, "RU"]]) {
+    await post("/api/config", { language: lang }); await sleep(1500); await open();
+    await page.click("#torrent-list li"); await sleep(500); await page.evaluate(() => document.getElementById("toolbar-inspector").click()); await sleep(1200);
+    await page.evaluate(() => { const b = [...document.querySelectorAll("#inspector button")].find((x) => /^(Files|Файлы)$/.test(x.textContent.trim())); b && b.click(); }); await sleep(1500);
+    const t = await page.evaluate(() => { const rows = [...document.querySelectorAll("#inspector-file-list li")]; return { n: rows.length, dirs: document.querySelectorAll("#inspector-file-list .ps5-fico.dir").length, files: document.querySelectorAll("#inspector-file-list .ps5-fico.file").length, dirRows: document.querySelectorAll("#inspector-file-list li.ps5-dir").length,
+      pads: rows.map((r) => r.style.paddingLeft), names: rows.map((r) => r.querySelector(".inspector-torrent-file-list-entry-name").textContent.trim()), fw: rows.map((r) => getComputedStyle(r.querySelector(".inspector-torrent-file-list-entry-name")).fontWeight), prog: rows.map((r) => r.querySelector(".inspector-torrent-file-list-entry-progress").textContent), iconFirst: rows.every((r) => r.querySelector(".inspector-torrent-file-list-entry-name").firstElementChild && r.querySelector(".inspector-torrent-file-list-entry-name").firstElementChild.tagName.toLowerCase() === "svg") }; });
+    check(`${label}: the torrent was added (HTTP ${st}) and the Files tab shows the tree: 3 folders and 3 files, each name starts with its icon (a yellow folder or a grey file)`, st === 200 && t.n === 6 && t.dirs === 3 && t.files === 3 && t.iconFirst, JSON.stringify({ n: t.n, dirs: t.dirs, files: t.files, iconFirst: t.iconFirst, names: t.names }));
+    check(`${label}: the folder rows are marked (class ps5-dir) and their names are bold; file names are not`, t.dirRows === 3 && t.names.every((nm, i) => (["GRoot", "sub", "deep"].includes(nm) ? Number(t.fw[i]) >= 600 : Number(t.fw[i]) < 600)), JSON.stringify({ names: t.names, fw: t.fw }));
+    check(`${label}: the nesting steps are 26px per level (0, 26, 26, 52, 52, 78)`, t.pads.join() === "0px,26px,26px,52px,52px,78px", t.pads.join());
+    check(`${label}: the progress line of a file ('x of y (z%)') is in the interface language (${lang === "ru" ? "«из»" : "«of»"})`, t.prog.every((x) => ofRe.test(x)) && (lang === "ru" ? !t.prog.some((x) => /(^|\s)of(\s|$)/.test(x)) : true), t.prog.join(" | "));
+    await page.evaluate(() => document.getElementById("toolbar-inspector").click()); await sleep(500);
+    const gap = await page.evaluate(() => { const sp = document.querySelector("#mainwin-statusbar > span:first-child"), sel = document.getElementById("filter-mode"); return { mr: getComputedStyle(sp).marginRight, gap: Math.round(sel.getBoundingClientRect().left - sp.getBoundingClientRect().right) }; });
+    check(`${label}: the space between 'Показать/Show' and the filter list is doubled (10px instead of 5px)`, gap.mr === "10px" && gap.gap >= 9, JSON.stringify(gap));
+    await page.evaluate(() => document.getElementById("toolbar-open").click()); await sleep(1500);
+    const dlg = await page.evaluate(() => { const d = document.querySelector("dialog.open-torrent"); if (!d) return null; const r = d.getBoundingClientRect(); const tiles = [...d.querySelectorAll(".ps5-tile")].map((x) => ({ text: x.textContent.replace(/\s+/g, " "), q: !!x.querySelector("button, .fd-q") })); return { w: Math.round(r.width), iw: innerWidth, tiles }; });
+    const usb = dlg && dlg.tiles.find((x) => /usb2/.test(x.text)), ssd = dlg && dlg.tiles.find((x) => /ext1/.test(x.text));
+    check(`${label}: the 'Add torrents' window is as wide as the settings sections (760px, not the stock 500px)`, !!dlg && dlg.w >= 740 && dlg.w <= 766, JSON.stringify(dlg && { w: dlg.w, iw: dlg.iw }));
+    check(`${label}: the tile of the exFAT disk says '${lang === "ru" ? "не рекомендуется (exFAT)" : "not recommended (exFAT)"}' without any question mark button; the M.2 tile has no such label`, !!usb && (lang === "ru" ? /не рекомендуется \(exFAT\)/ : /not recommended \(exFAT\)/).test(usb.text) && !usb.q && !!ssd && !/exFAT|рекомендуется|recommended/.test(ssd.text), JSON.stringify({ usb, ssd }));
+    await page.keyboard.press("Escape"); await sleep(400);
+  }
+  check("no JavaScript errors in the web client", errors.length === 0, errors.join(";"));
+  console.log(`\n${pass}/${pass + fail} inspector and dialog checks passed`); await browser.close(); process.exit(fail ? 1 : 0);
+})().catch((e) => { console.log("crashed", e); process.exit(2); });

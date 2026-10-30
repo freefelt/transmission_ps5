@@ -1,0 +1,61 @@
+Subject: guard: do not start or verify a torrent whose disk is not mounted
+
+Torrents are started not only through RPC (queue, restore on daemon start, internal checks),
+so the hooks sit in the two functions every path goes through: tr_torrent::start and
+tr_torrentVerify. A torrent on an unmounted external disk is neither started nor verified:
+otherwise Transmission would create the folder on the console's /mnt service filesystem and
+write there, and a verify without the disk would reset the progress.
+
+---
+diff --git a/libtransmission/torrent.cc b/libtransmission/torrent.cc
+index 2cf43a3..cdb7569 100644
+--- a/libtransmission/torrent.cc
++++ b/libtransmission/torrent.cc
+@@ -605,6 +605,9 @@ void freeTorrent(tr_torrent* tor)
+ 
+ // has_any_local_data is true or false if we know whether or not local data exists,
+ // or unset if we don't know and need to check for ourselves
++// PS5 guard v2: check of the disk of a torrent (implemented in the daemon wrapper, src/daemon/guard.c). kind: 0 = start, 1 = verify. 0 = allowed.
++extern "C" int ps5tm_guard_check_disk(char const* dir, int kind, char* msg, size_t msg_size);
++
+ void tr_torrent::start(bool bypass_queue, std::optional<bool> has_any_local_data)
+ {
+     using namespace start_stop_helpers;
+@@ -642,6 +645,19 @@ void tr_torrent::start(bool bypass_queue, std::optional<bool> has_any_local_data
+         break;
+     }
+ 
++    // PS5 guard v2: a torrent on an external disk that is not connected is not started (otherwise Transmission would create the folder on the system /mnt and start writing there).
++    // This covers every start: the button, the queue, loading at the start of the daemon. It is taken out of the queue too, so that the queue does not try again and again.
++    {
++        char ps5_msg[512] = { 0 };
++        if (ps5tm_guard_check_disk(current_dir().c_str(), 0, ps5_msg, sizeof(ps5_msg)) != 0)
++        {
++            error().set_local_error(ps5_msg);
++            start_when_stable_ = false;
++            set_is_queued(false);
++            return;
++        }
++    }
++
+     /* don't allow the torrent to be started if the files disappeared */
+     if (set_local_error_if_files_disappeared(this, has_any_local_data))
+     {
+@@ -1563,6 +1579,17 @@ void tr_torrentVerify(tr_torrent* tor)
+                 return;
+             }
+ 
++            // PS5 guard v2: with the disk not connected, Verify would find "no files" and reset the progress; a later start would then download everything again, to the wrong place.
++            {
++                char ps5_msg[512] = { 0 };
++                if (ps5tm_guard_check_disk(tor->current_dir().c_str(), 1, ps5_msg, sizeof(ps5_msg)) != 0)
++                {
++                    tor->error().set_local_error(ps5_msg);
++                    tor->start_when_stable_ = false;
++                    return;
++                }
++            }
++
+             session->verify_remove(tor);
+ 
+             if (!tor->has_metainfo())

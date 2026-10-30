@@ -1,0 +1,47 @@
+const puppeteer = require("puppeteer-core");
+let pass = 0, fail = 0; const check = (n, ok, e) => { (ok ? pass++ : fail++); console.log((ok ? "PASS " : "FAIL ") + n + (e !== undefined ? "  -> " + String(e).slice(0, 280) : "")); };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// The "When all downloads finish" section (choosing an action) and the full exit button to the right of the bell. Real Chrome.
+(async () => {
+  const browser = await puppeteer.launch({ executablePath: require("./chrome"), args: ["--no-sandbox", "--disable-gpu"], headless: "new" });
+  const page = await browser.newPage(); await page.setViewport({ width: 900, height: 1100 }); const errors = []; page.on("pageerror", (e) => errors.push(e.message));
+  const posts = []; await page.setRequestInterception(true);
+  page.on("request", (r) => { if (r.method() === "POST" && /\/api\/quit$/.test(r.url())) { posts.push(r.url()); r.respond({ status: 200, contentType: "application/json", body: '{"ok":true}' }); } else r.continue(); });
+  await page.goto("http://127.0.0.1:9092/", { waitUntil: "networkidle2" }); await sleep(2600);
+  const geo = await page.evaluate(() => { const q = document.getElementById("quitBtn").getBoundingClientRect(), b = document.getElementById("bell").getBoundingClientRect(); return { qr: Math.round(window.innerWidth - q.right), ql: Math.round(q.left), br: Math.round(b.right), bl: Math.round(b.left), qt: Math.round(q.top), bt: Math.round(b.top), qh: Math.round(q.height), bh: Math.round(b.height), w: window.innerWidth, qpos: getComputedStyle(document.getElementById("quitBtn")).position, title: document.getElementById("quitBtn").title }; });
+  check("EXIT BUTTON: a round button like the bell, fixed in the TOP-LEFT corner of the page (the bell stays in the top-right corner), same height and top", geo.qpos === "fixed" && geo.ql <= 14 && geo.w - geo.br <= 14 && geo.qt === geo.bt && Math.abs(geo.qh - geo.bh) <= 1 && /Выйти/.test(geo.title), JSON.stringify(geo));
+  await page.click("#bell"); await sleep(500);
+  const pan = await page.evaluate(() => { const p = document.getElementById("bellPanel").getBoundingClientRect(), q = document.getElementById("quitBtn").getBoundingClientRect(); return { panelTop: Math.round(p.top), btnBottom: Math.round(q.bottom) }; });
+  check("the bell panel opens below both buttons (it does not cover the buttons)", pan.panelTop >= pan.btnBottom, JSON.stringify(pan));
+  await page.evaluate(() => document.body.click()); await sleep(400);
+  await page.click("#quitBtn"); await sleep(500);
+  const m = await page.evaluate(() => { const e = document.getElementById("quitModal"); return { disp: getComputedStyle(e).display, text: e.textContent, btns: [...e.querySelectorAll("button")].map((b) => b.textContent) }; });
+  check("clicking it asks for CONFIRMATION: what will happen (pause, graceful stop of Transmission, the manager closes, how to start again) with the buttons 'Отмена' and 'Выйти'", m.disp === "flex" && /приостановлены и запомнены/.test(m.text) && /корректно завершится/.test(m.text) && /отправив Transmission\.elf/.test(m.text) && m.btns.join() === "Отмена,Выйти", JSON.stringify({ d: m.disp, b: m.btns }));
+  await page.click("#quitCancel"); await sleep(500);
+  check("'Отмена' closes it and sends nothing", (await page.evaluate(() => getComputedStyle(document.getElementById("quitModal")).display)) === "none" && posts.length === 0, posts.length);
+  await page.click("#quitBtn"); await sleep(400); await page.click("#quitConfirm"); await sleep(900);
+  const done = await page.evaluate(() => ({ disp: getComputedStyle(document.getElementById("quitDone")).display, text: document.getElementById("quitDone").textContent }));
+  check("'Выйти' sends POST /api/quit once and shows 'Transmission закрывается…' with how to start it again", posts.length === 1 && done.disp === "flex" && /закрывается/.test(done.text) && /Transmission\.elf/.test(done.text), JSON.stringify({ posts: posts.length, d: done.disp }));
+  const reqs = []; page.on("request", (r) => { if (/\/api\/state$/.test(r.url())) reqs.push(Date.now()); }); await sleep(7000);
+  check("after that the page stops polling the manager (it is going away): no more /api/state requests", reqs.length === 0, reqs.length);
+  // the "When all downloads finish" section: choosing an action and the power-off warning
+  await page.goto("http://127.0.0.1:9092/", { waitUntil: "networkidle2" }); await sleep(2600);
+  const sec = await page.evaluate(() => { const h = [...document.querySelectorAll("h2")].map((x) => x.textContent); return { h, label: document.querySelector("#asRow label").firstChild.textContent }; });
+  check("the section heading and the checkbox are reworded", sec.h.includes("При завершении всех загрузок") && !sec.h.includes("Режим сна") && sec.label === "Выполнить действие при завершении всех загрузок", JSON.stringify(sec));
+  await page.evaluate(() => { document.getElementById("asArm").click(); }); await sleep(700);
+  check("the action list is the first field of the opened box with two choices", await page.evaluate(() => { const s = document.getElementById("sf_autosleep_action"); return !!s && [...s.options].map((o) => o.textContent).join("|") === "Уйти в режим сна|Выключить консоль" && document.getElementById("sleepForm").firstElementChild.contains(s); }));
+  const vis = (id) => page.evaluate((i) => { const e = document.getElementById(i); return !!e && getComputedStyle(e).display !== "none" && e.offsetHeight > 0; }, id);
+  const methodShown0 = await vis("sf_row_sleep_method");
+  await page.select("#sf_autosleep_action", "poweroff"); await sleep(700);
+  const methodShown1 = await vis("sf_row_sleep_method");
+  check("'Способ перехода в режим сна' is shown with 'Уйти в режим сна' and hidden when 'Выключить консоль' is chosen", methodShown0 === true && methodShown1 === false, JSON.stringify({ methodShown0, methodShown1 }));
+  await page.select("#sf_autosleep_action", "sleep"); await sleep(700);
+  check("... and it comes back when 'Уйти в режим сна' is chosen again", (await vis("sf_row_sleep_method")) === true);
+  const pop = async (action) => page.evaluate((a) => { state.config.autosleep_action = a; actOpen(); const m = document.querySelector("#actModal .modal-card").getBoundingClientRect(); return { disp: getComputedStyle(document.getElementById("actModal")).display, title: document.getElementById("actTitle").textContent, text: document.getElementById("actBody").textContent, hide: getComputedStyle(document.getElementById("actHideRow")).display, w: Math.round(m.width), iw: innerWidth, b: Math.round(m.bottom), ih: innerHeight }; }, action);
+  const ps = await pop("sleep"); await page.evaluate(() => document.getElementById("actCancel").click()); await sleep(400);
+  const pp = await pop("poweroff"); await page.evaluate(() => { document.getElementById("actCancel").click(); state.config.autosleep_action = "sleep"; }); await sleep(400);
+  check("the 'Активировать' popup for sleep (not tested on all firmware, may hang, kernel panic; with the 'don't show again' checkbox) fits the window", ps.disp === "flex" && /Переход в режим сна/.test(ps.title) && /kernel panic/.test(ps.text) && ps.hide !== "none" && ps.w <= ps.iw && ps.b <= ps.ih, JSON.stringify(ps));
+  check("the popup for powering off (the same call as PS5-Power-Payloads-Project: HALT and POWEROFF, no normal shutdown) has no checkbox and fits the window", pp.disp === "flex" && /Выключение консоли/.test(pp.title) && /HALT и POWEROFF/.test(pp.text) && /сохранность данных/.test(pp.text) && pp.hide === "none" && pp.w <= pp.iw && pp.b <= pp.ih, JSON.stringify(pp));
+  check("no JS errors", errors.length === 0, errors.join(";"));
+  console.log(`\n${pass}/${pass + fail} sleep section and exit button checks passed`); await browser.close(); process.exit(fail ? 1 : 0);
+})().catch((e) => { console.log("crashed", e); process.exit(2); });

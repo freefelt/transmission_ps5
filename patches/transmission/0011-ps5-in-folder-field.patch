@@ -1,0 +1,56 @@
+Subject: new torrent-get field ps5_in_folder
+
+True when the files of the torrent lie in its own folder (the path of the first file has a '/').
+The stock web interface treats only torrents with more than one file as folders and shows a
+single file inside a folder as a file ('Open folder' then opens the parent folder).
+
+---
+diff --git a/libtransmission/rpcimpl.cc b/libtransmission/rpcimpl.cc
+index 527fe03..344d8d5 100644
+--- a/libtransmission/rpcimpl.cc
++++ b/libtransmission/rpcimpl.cc
+@@ -697,8 +697,20 @@ namespace make_torrent_field_helpers
+ }
+ } // namespace make_torrent_field_helpers
+ 
+-[[nodiscard]] auto constexpr isSupportedTorrentGetField(tr_quark key)
++// PS5 guard v9: the key of the new field ps5_in_folder (interned on first use)
++[[nodiscard]] tr_quark ps5_in_folder_key()
+ {
++    static auto const key = tr_quark_new("ps5_in_folder"sv);
++    return key;
++}
++
++[[nodiscard]] bool isSupportedTorrentGetField(tr_quark key)
++{
++    if (key == ps5_in_folder_key())
++    {
++        return true;
++    }
++
+     switch (key)
+     {
+     case TR_KEY_activity_date:
+@@ -794,6 +806,12 @@ namespace make_torrent_field_helpers
+ 
+     TR_ASSERT(isSupportedTorrentGetField(key));
+ 
++    // PS5 guard v9: the files of the torrent are in a folder of their own (the path of the first file contains "/")
++    if (key == ps5_in_folder_key())
++    {
++        return tor.file_count() > 0U && tor.file_subpath(0U).find('/') != std::string::npos;
++    }
++
+     switch (key)
+     {
+     case TR_KEY_activity_date:
+@@ -1021,6 +1039,9 @@ namespace make_torrent_field_helpers
+         args_out.try_emplace(TR_KEY_removed, std::move(removed_vec));
+     }
+ 
++    // PS5 guard v9: the key of the field ps5_in_folder must be known before the field list is parsed (tr_quark_lookup finds only keys that already exist)
++    (void)ps5_in_folder_key();
++
+     auto keys = std::vector<tr_quark>{};
+     if (auto const* const fields_vec = args_in.find_if<tr_variant::Vector>(TR_KEY_fields); fields_vec != nullptr)
+     {

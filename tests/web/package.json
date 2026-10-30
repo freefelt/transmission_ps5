@@ -1,0 +1,9 @@
+{
+  "name": "transmission-ps5-tests",
+  "private": true,
+  "description": "Page tests (jsdom) and web client tests (Chrome); run by tests/run_pages.py (scripts/test.sh pages)",
+  "dependencies": {
+    "jsdom": "30.1.2",
+    "puppeteer-core": "23.11.1"
+  }
+}

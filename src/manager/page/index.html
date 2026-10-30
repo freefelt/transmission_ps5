@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transmission for PS5: settings</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<style>
+@@STYLE@@
+</style></head><body>
+<button id="quitBtn" title="Exit Transmission" aria-label="Exit Transmission"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e6e9ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
+<button id="bell" title="Notifications"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e6e9ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="bellBadge"></span></button>
+<div id="bellPanel"></div>
+<div id="quitModal" class="modal" style="display:none" role="dialog" aria-modal="true"><div class="modal-card">
+<h3>Exit Transmission?</h3>
+<p>Active downloads will be paused and remembered, Transmission (the daemon) will shut down cleanly, then this page will close together with the Transmission.elf manager.</p>
+<p>You can start it again by sending Transmission.elf to the console: the paused downloads will resume.</p>
+<div class="modal-btns"><button id="quitCancel" class="alt">Cancel</button><button id="quitConfirm" class="danger">Exit</button></div>
+</div></div>
+<div id="quitDone" class="modal" style="display:none" role="dialog" aria-modal="true"><div class="modal-card">
+<h3>Transmission is closing</h3>
+<p id="quitDoneText">Downloads are being paused and the daemon is shutting down. This takes a few seconds; when the page stops responding, everything is closed.</p>
+<p>To start it again, send Transmission.elf to the console.</p>
+</div></div>
+<div id="actModal" class="modal" style="display:none" role="dialog" aria-modal="true"><div class="modal-card">
+<h3 id="actTitle"></h3>
+<div id="actBody"></div>
+<label id="actHideRow" style="display:none;align-items:center;gap:8px;margin:10px 0"><input type="checkbox" id="actHide"><span>Do not show this warning again (until the next version)</span></label>
+<div class="modal-btns"><button id="actCancel" class="alt">Cancel</button><button id="actGo" class="ok">Activate</button></div>
+</div></div>
+<div id="fdModal" class="modal" style="display:none" role="dialog" aria-modal="true"><div class="modal-card">
+<h3 id="fdWarnTitle"></h3>
+<div id="fdWarnBody"></div>
+<div class="modal-btns"><button id="fdCancel" class="alt">Cancel</button><button id="fdConfirm" class="danger">Add anyway</button></div>
+</div></div>
+<div id="cfmModal" class="modal" style="display:none" role="dialog" aria-modal="true"><div class="modal-card">
+<h3 id="cfmTitle"></h3>
+<p id="cfmText"></p>
+<div class="modal-btns"><button id="cfmCancel" class="alt">Cancel</button><button id="cfmOk" class="danger">OK</button></div>
+</div></div>
+<div id="fdDelModal" class="modal" style="display:none" role="dialog" aria-modal="true"><div class="modal-card">
+<h3>Remove the download folder?</h3>
+<p id="fdDelPath" style="word-break:break-all;font-weight:600"></p>
+<p>The folder will be removed from the list. The files and torrents in it are not deleted.</p>
+<div class="modal-btns"><button id="fdDelCancel" class="alt">Cancel</button><button id="fdDelConfirm" class="danger">Remove from the list</button></div>
+</div></div>
+<div id="fdUmModal" class="modal" style="display:none" role="dialog" aria-modal="true"><div class="modal-card">
+<h3 id="umTitle"></h3>
+<p id="umPath" style="word-break:break-all;font-weight:600"></p>
+<div id="umBody"></div>
+<div id="umHolders" class="um-holders" style="display:none"></div>
+<div class="modal-btns"><button id="umCancel" class="alt">Cancel</button><button id="umForce" class="danger" style="display:none">Eject by force</button><button id="umGo">Unmount</button></div>
+</div></div>
+<div id="fdPickModal" class="modal" style="display:none" role="dialog" aria-modal="true"><div class="modal-card pk-card">
+<h3>Choose a download folder</h3>
+<div class="pk-disk"><label for="pkDisk">Drive</label><select id="pkDisk"></select></div>
+<div id="pkCrumbs" class="pk-crumbs"></div>
+<div id="pkList" class="pk-list" role="listbox"></div>
+<div id="pkNew" class="pk-new" style="display:none"><input type="text" id="pkName" placeholder="Name of the new folder" maxlength="100" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="pkMake">Create</button><button id="pkMakeCancel" class="alt">Cancel</button></div>
+<div id="pkMsg" class="msg" style="min-height:1.4em;margin-top:8px"></div>
+<div class="modal-btns"><button id="pkNewBtn" class="alt pk-left">New folder</button><button id="pkCancel" class="alt">Cancel</button><button id="pkChoose">Choose this folder</button></div>
+</div></div>
+<div id="saveBar"><button id="save">Save</button><button id="reset" class="alt" style="display:none">Reset changes</button><span id="saveMsg" class="msg" style="display:none"></span></div>
+<main>
+<div class="hd"><img src="/icon-128.png" width="56" height="56" alt=""><div><h1>Transmission for PS5</h1>
+<div id="top" class="help">Loading…</div></div></div>
+
+<h2>Transmission</h2>
+<div class="card"><div class="kv"><span>Status</span><span id="dmState">…</span></div>
+<div class="help" id="dmNote"></div>
+<p style="display:flex;align-items:center;gap:10px"><button id="dmBtn" class="danger">…</button><span id="dmMsg" class="msg"></span><a id="trLink" href="#" style="display:none;margin-left:auto">Open the Transmission web interface</a></p>
+<div id="status"></div></div>
+<h2>Download folders</h2>
+<div class="card" id="fdCard">
+<div class="help">New torrents can only be added to these folders (and moved only to them). It is better to use an external USB drive or an M.2 SSD.</div>
+<div id="fdList"></div>
+<div id="fdEmpty" class="help" style="display:none;margin:10px 0">There are no download folders: new torrents cannot be added. Add at least one folder.</div>
+<div id="fdBar" style="margin-top:22px;display:flex;align-items:center;gap:14px"><button id="fdShowAdd" class="alt">+ Add</button><span id="fdMsg" class="msg" style="margin:0"></span></div>
+<div id="fdLimit" class="help" style="display:none;margin-top:10px">Limit reached: no more than 8 folders can be added on this page. Remove the ones you do not need. More can be specified in config.cfg (download_folder= lines).</div>
+</div>
+
+<h2>When all downloads finish</h2>
+<div class="card">
+<div class="row" id="asRow"><label for="asArm">Perform an action when all downloads finish<span class="help" id="asNote"></span></label><input type="checkbox" id="asArm"></div>
+<div id="asBox" style="display:none">
+<div id="sleepForm"></div>
+<p><button id="asBtn" class="ok">Activate</button></p>
+<div class="help" id="asHint"></div>
+<div class="help">If all downloads are paused or removed, the action deactivates itself and the console does nothing. The activation is not saved: after sleep, power off or a manager restart it is off. If the console woke up (including when it went to sleep by itself on its own timer), the activation is cleared as well: turn it on again.</div>
+</div>
+<div id="sleepCount" style="display:none"><b id="sleepLine"></b> <button id="sleepCancel">Cancel</button></div>
+</div>
+
+<div class="acc" id="accSettings"><button type="button" class="acc-head" id="accSettingsBtn" aria-expanded="false"><span>Settings</span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+<div id="accSettingsBody" style="display:none"><div class="card" id="form"></div></div></div>
+
+<div class="acc" id="accExpert"><button type="button" class="acc-head" id="accExpertBtn" aria-expanded="false"><span>Advanced settings</span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+<div id="accExpertBody" style="display:none">
+<div class="card" id="expertForm"></div>
+<div id="expertIcon"><h3 class="sub">Icon on the “Media” tab</h3>
+<div class="card"><div class="kv"><span>Status</span><span id="iconState">…</span></div>
+<div class="help">The icon opens this page in the PS5 browser. The app registers a separate short process, transmission_i.elf, with the system (the Payload Manager method): if it hangs, the manager and Transmission are not affected, and there will be no automatic retries. Installation takes a few seconds.</div>
+<p><button class="alt" id="iconInstall">Install</button> <button class="alt" id="iconRemove">Remove</button><span id="iconMsg" class="msg"></span></p></div>
+</div>
+</div></div>
+<div class="acc" id="accDiag"><button type="button" class="acc-head" id="accDiagBtn" aria-expanded="false"><span>Diagnostics</span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+<div id="accDiagBody" style="display:none">
+<div class="card">
+<div class="kv"><span>System service</span><span id="ssState">…</span></div>
+<div class="help">If Transmission “hangs” after sleep but this page works, press the buttons below and send the result. “Check Transmission” shows whether it accepts a local connection and responds. “Threads”: where the process threads stand (the wait column shows what a thread is waiting for). “Log”: the last lines of shim.log. “Drives”: which of /mnt/ext*, /mnt/usb* are connected (press with the drive and without it). “Mount points”: all mount points the manager sees (USB and M.2 first).</div>
+<div class="btnrow"><button id="dgAll">Diagnostic snapshot (everything at once)</button> <button class="alt" id="dgSelect">Select text</button></div>
+<div class="btnrow"><button class="alt" id="dgProbe">Check Transmission</button> <button class="alt" id="dgDisks">Drives</button> <button class="alt" id="dgMounts">Mount points</button> <button class="alt" id="dgThreads">Threads</button> <button class="alt" id="dgLog">Manager log</button> <button class="alt" id="dgDlog">Daemon log</button> <button class="alt" id="dgTlog">Transmission log</button></div>
+<pre id="dgOut" style="white-space:pre-wrap;word-break:break-all;background:#0f1319;border:1px solid #2a3340;border-radius:8px;padding:10px;font-size:12px;max-height:420px;overflow:auto;margin:6px 0 0"></pre>
+</div>
+</div></div>
+<div class="acc" id="accCredits"><button type="button" class="acc-head" id="accCreditsBtn" aria-expanded="false"><span>Credits and licenses</span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+<div id="accCreditsBody" style="display:none">
+<div class="card"><div class="credit">
+<p>Transmission icon: <a href="https://github.com/Zabriskije" target="_blank" rel="noopener">Zabriskije</a> (<a href="https://github.com/transmission/transmission/discussions/5479" target="_blank" rel="noopener">discussion thread</a>).</p>
+<p>Examples and sources that helped the development: <a href="https://github.com/ItsBlurf/BFpilot" target="_blank" rel="noopener">BFpilot</a> (icon registration through SceIpmi and SceAppInstUtil), <a href="https://github.com/itsPLK/ps5-payload-manager" target="_blank" rel="noopener">Payload Manager</a> (process names, icon installation, process memory), <a href="https://github.com/drakmor/shadowMountPlus" target="_blank" rel="noopener">ShadowMountPlus</a> (set of libraries), <a href="https://github.com/ps5-payload-dev/websrv" target="_blank" rel="noopener">websrv</a> and <a href="https://github.com/ps5-payload-dev/ftpsrv" target="_blank" rel="noopener">ftpsrv</a> (installing a shortcut app), <a href="https://github.com/ps5-payload-dev/sdk" target="_blank" rel="noopener">ps5-payload-sdk</a> (John Törnblom) and <a href="https://github.com/transmission/transmission" target="_blank" rel="noopener">Transmission</a>.</p>
+<p>Sleep and power off: <a href="https://github.com/ps5-linux/ps5-linux-loader" target="_blank" rel="noopener">ps5-linux-loader</a> (the way to enter rest mode), <a href="https://github.com/MasterPS0/PS5-Power-Payloads-Project" target="_blank" rel="noopener">PS5-Power-Payloads-Project</a> (power off and rest mode calls), <a href="https://github.com/deox1111/ps5-library" target="_blank" rel="noopener">ps5-library</a> (ideas about working in rest mode and device pairing), <a href="https://github.com/manos555555/PS5-Suite" target="_blank" rel="noopener">PS5-Suite</a> (a note about the official power off calls).</p>
+<p>Transmission 4.1.3 is distributed under the GPL license (version 2 or 3, your choice).</p>
+<p>Icons on the Transmission page: monochrome <a href="https://github.com/lucide-icons/lucide" target="_blank" rel="noopener">Lucide</a> (ISC); color: toolbar buttons and the USB drive icon <a href="https://github.com/Richard9394/MingCute" target="_blank" rel="noopener">MingCute</a> (Apache-2.0), torrent icons <a href="https://github.com/microsoft/fluentui-emoji" target="_blank" rel="noopener">Fluent Emoji</a> (MIT), the internal drive <a href="https://github.com/microsoft/fluentui-system-icons" target="_blank" rel="noopener">Fluent UI System Icons</a> (MIT). The M.2 SSD icon was drawn for this project. The sets were taken through <a href="https://iconify.design" target="_blank" rel="noopener">Iconify</a>.</p>
+</div></div>
+</div></div>
+<p class="repo">Project repository: <a href="https://github.com/freefelt/transmission_ps5" target="_blank" rel="noopener">https://github.com/freefelt/transmission_ps5</a></p>
+</main>
+<script>
+@@SCRIPT@@
+</script></body></html>

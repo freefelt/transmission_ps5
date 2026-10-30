@@ -1,0 +1,56 @@
+Subject: sequential mode really goes in order
+
+Transmission picks a piece by: fewer unsent blocks first, then priority, then rarer pieces,
+and only then the 'salt' (the piece index in sequential mode). In a real swarm the rare pieces
+from random places win and the short last piece counts as 'closer to completion'. In
+sequential mode only the file priority and the piece index are compared.
+
+---
+diff --git a/libtransmission/peer-mgr-wishlist.cc b/libtransmission/peer-mgr-wishlist.cc
+index f4354c2..ae11c99 100644
+--- a/libtransmission/peer-mgr-wishlist.cc
++++ b/libtransmission/peer-mgr-wishlist.cc
+@@ -60,6 +60,7 @@ class Wishlist::Impl
+             , replication{ mediator->count_piece_replication(piece_in) }
+             , priority{ mediator->priority(piece_in) }
+             , salt{ salt_in }
++            , sequential{ mediator->is_sequential_download() } // PS5 guard v5
+         {
+             unrequested.reserve(block_span.end - block_span.begin);
+             for (auto [begin, i] = block_span; i > begin; --i)
+@@ -101,6 +102,8 @@ class Wishlist::Impl
+         tr_priority_t priority;
+ 
+         tr_piece_index_t salt;
++
++        bool sequential = false; // PS5 guard v5: "in order" mode (see compare for how candidates are compared)
+     };
+ 
+     using CandidateVec = std::vector<Candidate>;
+@@ -478,6 +481,7 @@ private:
+         for (auto& candidate : candidates_)
+         {
+             candidate.salt = get_salt(candidate.piece);
++            candidate.sequential = mediator_.is_sequential_download(); // PS5 guard v5
+         }
+ 
+         std::sort(std::begin(candidates_), std::end(candidates_));
+@@ -609,6 +613,18 @@ std::vector<tr_block_span_t> Wishlist::Impl::next(
+ 
+ int Wishlist::Impl::Candidate::compare(Candidate const& that) const noexcept
+ {
++    // PS5 guard v5: in "in order" mode a piece is chosen ONLY by the priority of the file and the piece number (salt). Without "closer to completion" (the short last piece
++    // would go first) and without "rarest first" (pieces from random places): otherwise a write at a far offset stretches the file, and on exFAT that is minutes of filling with zeroes.
++    if (sequential && that.sequential)
++    {
++        if (auto const val = tr_compare_3way(priority, that.priority); val != 0)
++        {
++            return -val;
++        }
++
++        return tr_compare_3way(salt, that.salt);
++    }
++
+     // prefer pieces closer to completion
+     if (auto const val = tr_compare_3way(std::size(unrequested), std::size(that.unrequested)); val != 0)
+     {

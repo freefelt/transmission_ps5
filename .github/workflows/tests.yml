@@ -1,0 +1,81 @@
+# The tests (they start the real daemon and manager and emulate disks with tmpfs, so they need root: a GitHub runner is a disposable VM).
+# On every push and pull request: the smoke suites and the page tests. "full" (all suites) runs when asked and before a release.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Run all the suites (about 45 minutes) instead of the smoke ones"
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      full:
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}-${{ inputs.full }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install the build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-18 lld-18 llvm-18-dev cmake make patch perl curl xz-utils unzip build-essential
+
+      - name: Cache the downloaded SDK and libraries
+        uses: actions/cache@v4
+        with:
+          path: |
+            .deps
+            !.deps/test
+          key: deps-${{ runner.os }}-${{ hashFiles('scripts/deps.sh', 'scripts/build-elf.sh') }}
+          restore-keys: |
+            deps-${{ runner.os }}-
+
+      - name: Build the payload (the tests use the web files and icons it generates)
+        run: ./build.sh
+
+      - name: Prepare the machine (folders, 192.0.2.2 on lo, Node modules, Chromium)
+        run: sudo env "PATH=$PATH" tests/setup-env.sh --install-chrome
+
+      - name: Build the daemon and the manager for this machine
+        run: tests/build/build-test-binaries.sh
+
+      - name: Suites
+        run: |
+          if [ "${{ inputs.full }}" = "true" ]; then scope=full; else scope=smoke; fi
+          sudo env "PATH=$PATH" scripts/test.sh "$scope"
+
+      - name: Page tests
+        if: ${{ !cancelled() }}
+        run: |
+          sudo env "PATH=$PATH" scripts/test.sh pages settings daemon-card sleep webui effects language webui-language
+
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            /tmp/ps5tm-test-*.txt
+            /tmp/ps5tm-test-*.out
+          retention-days: 14

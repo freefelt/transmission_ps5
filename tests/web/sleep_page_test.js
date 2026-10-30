@@ -1,0 +1,50 @@
+const { JSDOM } = require("jsdom");
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+let pass = 0, fail = 0; const check = (n, ok, e) => { (ok ? pass++ : fail++); console.log((ok ? "PASS " : "FAIL ") + n + (e !== undefined ? "  -> " + String(e).slice(0, 170) : "")); };
+const phase = process.argv[2]; let confirms = [];
+const open = async () => { const errors = []; const dom = await JSDOM.fromURL("http://127.0.0.1:9092/", { runScripts: "dangerously", resources: "usable", pretendToBeVisual: true, beforeParse(w) { w.PS5_ANIM_MS = 0; w.confirm = (t) => { confirms.push(t); return true; }; w.alert = () => {}; w.addEventListener("error", (e) => errors.push(String(e.message))); } }); await wait(2500); return { dom, d: dom.window.document, errors, $: (i) => dom.window.document.getElementById(i), ev: (el, t) => el.dispatchEvent(new dom.window.Event(t, { bubbles: true })) }; };
+(async () => {
+  let { dom, d, errors, $, ev } = await open();
+  if (phase === "A") {
+    check("no JS errors; 8 notification fields; the sleep box holds 4 settings (notification, delay, time limit, keep awake) and selects for the action and the method", errors.length === 0 && d.querySelectorAll("#form input").length === 9 && d.querySelectorAll("#asBox #sleepForm input").length === 4, errors.join(";"));
+    check("not activated: the checkbox is clear and the box is hidden; the checkbox is usable", $("asArm").checked === false && $("asBox").style.display === "none" && $("asArm").disabled === false);
+    check("there are no separate Save/Reset buttons in the sleep box any more", !$("sleepSave") && !$("sleepReset") && !d.querySelector("#asBox #sleepSave"));
+    $("asArm").checked = true; ev($("asArm"), "change"); await wait(200);
+    check("ticking the checkbox only opens the section (nothing is activated on the server)", $("asBox").style.display === "block" && /Нет активных закачек/.test($("asHint").textContent));
+    check("no active downloads: the green 'Активировать' button is disabled", $("asBtn").textContent === "Активировать" && $("asBtn").className === "ok" && $("asBtn").disabled === true);
+    check("the sleep box order: time limit first (right after the checkbox), then the notification checkbox, then its delay (a nested, indented row)", (() => { const ids = [...d.querySelectorAll("#sleepForm input")].map((i) => i.id); return ids.join() === "sf_autosleep_timeout_minutes,sf_sleep_notify_before,sf_sleep_countdown_seconds,sf_keep_awake" && $("sf_row_sleep_countdown_seconds").classList.contains("sub") && !$("sf_row_autosleep_timeout_minutes").classList.contains("sub"); })());
+    check("defaults: notification on, delay 10, time limit 240", $("sf_sleep_notify_before").checked && $("sf_sleep_countdown_seconds").value === "10" && $("sf_autosleep_timeout_minutes").value === "240");
+    const n = $("sf_sleep_notify_before"), dl = $("sf_sleep_countdown_seconds");
+    n.checked = false; ev(n, "change"); await wait(150);
+    check("notification unticked: the delay row is HIDDEN (not just greyed) and disabled", dl.disabled && $("sf_row_sleep_countdown_seconds").style.display === "none");
+    check("the change shows the common floating bar (not a button in the box)", $("saveBar").style.display === "flex");
+    $("reset").click(); await wait(150);
+    check("'Сбросить изменения' of the common bar restores the sleep fields too", n.checked === true && !dl.disabled && $("saveBar").style.display === "none");
+    check("after Reset the delay row is back (visible)", $("sf_row_sleep_countdown_seconds").style.display !== "none");
+    $("asArm").checked = false; ev($("asArm"), "change"); await wait(100);
+    check("unticking hides the section again", $("asBox").style.display === "none");
+  } else {
+    $("asArm").checked = true; ev($("asArm"), "change"); await wait(200);
+    check("an active download: 'Активировать' is green and enabled", $("asBtn").textContent === "Активировать" && $("asBtn").className === "ok" && $("asBtn").disabled === false && /Активных закачек: 1/.test($("asHint").textContent), $("asHint").textContent);
+    const t = $("sf_autosleep_timeout_minutes"); t.value = "150"; ev(t, "input"); await wait(150);
+    check("an unsaved change blocks the activation and says why", $("asBtn").disabled === true && /Сначала сохраните/.test($("asHint").textContent) && $("saveBar").style.display === "flex", $("asHint").textContent);
+    $("save").click(); await wait(1800);
+    check("saving through the common bar; the button is available again", /Сохранено/.test($("saveMsg").textContent) && $("asBtn").disabled === false, $("saveMsg").textContent);
+    $("asBtn").click(); await wait(500);
+    check("'Активировать' first asks: a popup with the sleep warning; nothing is armed yet", $("actModal").style.display === "flex" && /Переход в режим сна/.test($("actTitle").textContent) && $("asBtn").textContent === "Активировать");
+    $("actGo").click(); await wait(2600);
+    check("'Активировать' activates: the checkbox is locked, the button is red 'Деактивировать', the time left is shown (2 ч 30 мин)", $("asArm").checked && $("asArm").disabled && $("asBtn").textContent === "Деактивировать" && $("asBtn").className === "danger" && /осталось: 2 ч 30 мин/.test($("asHint").textContent), $("asHint").textContent);
+    dom.window.close(); ({ dom, d, errors, $, ev } = await open());
+    check("after a page reload an activated auto-sleep shows the checkbox ticked and the section open", $("asArm").checked === true && $("asBox").style.display === "block" && $("asBtn").textContent === "Деактивировать" && $("sf_autosleep_timeout_minutes").value === "150");
+    $("asBtn").click(); await wait(2600);
+    check("'Деактивировать' switches it off, but the section STAYS open and the checkbox stays ticked (and becomes usable again)", $("asArm").checked === true && $("asBox").style.display === "block" && $("asArm").disabled === false && $("asBtn").textContent === "Активировать" && $("asBtn").className === "ok", $("asBtn").textContent);
+    $("asArm").checked = false; $("asArm").dispatchEvent(new dom.window.Event("change", { bubbles: true })); await wait(150);
+    check("the checkbox can then be cleared by hand to close the section", $("asBox").style.display === "none");
+    dom.window.close(); ({ dom, d, errors, $, ev } = await open());
+    check("after another reload: not activated -> checkbox clear, section hidden; the saved time limit is still 150", $("asArm").checked === false && $("asBox").style.display === "none" && $("sf_autosleep_timeout_minutes").value === "150");
+    dom.window.api("/api/sleep", { action: "start" }, () => dom.window.refresh()); await wait(1800);
+    check("a sleep started through the API (the diagnostics button is gone): progress is shown", /Останавливаю Transmission|Ухожу в сон/.test($("sleepLine").textContent) && $("sleepCount").style.display === "block", $("sleepLine").textContent);
+    check("the activation button is locked while a sleep is in progress", $("asBtn").disabled === true);
+  }
+  console.log(`\n${pass}/${pass + fail} sleep page checks passed (${phase})`); dom.window.close(); process.exit(fail ? 1 : 0);
+})().catch((e) => { console.log("crashed", e); process.exit(2); });

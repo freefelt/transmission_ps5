@@ -1,0 +1,19 @@
+Subject: libdeflate: use the generic C code instead of the x86 branch
+
+The clang for the PS5 defines __SCE__, so the AVX-VNNI/AVX-512 intrinsic headers are not
+included, while libdeflate tries to call them. Disable its x86 branch (plain C instead).
+
+---
+diff --git a/third-party/libdeflate/common_defs.h b/third-party/libdeflate/common_defs.h
+index 094d438..12f086d 100644
+--- a/third-party/libdeflate/common_defs.h
++++ b/third-party/libdeflate/common_defs.h
+@@ -77,7 +77,7 @@
+ #    define ARCH_ARM32
+ #  endif
+ #else
+-#  if defined(__x86_64__)
++#  if 0 /* PS5: __SCE__ clang omits AVX-VNNI/AVX-512 intrinsics; use generic C */
+ #    define ARCH_X86_64
+ #  elif defined(__i386__)
+ #    define ARCH_X86_32

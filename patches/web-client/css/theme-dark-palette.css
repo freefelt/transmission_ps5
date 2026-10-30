@@ -1,0 +1,14 @@
+/* dark palette: every variable is set here (the stock dark theme has no download bar colors and more) */
+:root{color-scheme:dark;
+--color-bg-primary:#12161c;--color-bg-odd:#12161c;--color-bg-even:#12161c;--color-bg-popup:#1b212b;--color-bg-hover:#222a36;--color-bg-selected:#22406f;--color-bg-tabs:#1b212b;--color-bg-warn:#7a2f3a;
+--color-border-default:#2a3340;--color-border-stark:#3a4658;--color-border-starkest:#4a566a;--color-dialog-border:#2a3340;
+--color-fg-primary:#e6e9ee;--color-fg-secondary:#a7b2c2;--color-fg-tertiary:#7d8999;--color-fg-disabled:#6b7788;--color-fg-selected:#fff;--color-fg-on-popup:#e6e9ee;--color-fg-tabs:#e6e9ee;--color-fg-warn:#ffd6dc;--color-fg-error:#ff6b7a;--color-fg-port-closed:#ff6b7a;--color-fg-port-open:#3ddc84;
+--color-toolbar-background:#161b22;
+--color-progressbar-fg-1:#edefff;--color-progressbar-fg-2:#fff;--color-progressbar-fg-3:#e6e9ee;
+--color-progressbar-leech:#3b82f6;--color-progressbar-queued:#6366f1;--color-progressbar-magnet:#d9a21b;--color-progressbar-verify:#d9a21b;--color-progressbar-paused:#4b5565;--color-progressbar-seed-1:#22a55b;--color-progressbar-seed-2:#2b3646;--color-progressbar-seed-paused:#4b5565;--color-progressbar-background-2:#2b3646;
+--progress-bar-shadow-1:0 0 0 #000;--progress-bar-shadow-2:0 1px 2px rgba(0,0,0,.55);--progress-bar-shadow-3:0 0 0 #000;
+--ps5-card:#1a2029;--ps5-field:#1b212b}
+:root .contrast-more{--color-bg-primary:#000;--color-bg-odd:#000;--color-bg-popup:#000;--color-toolbar-background:#000;--ps5-card:#000;--ps5-field:#000}
+:root .contrast-less{--color-bg-primary:#12161c;--color-bg-odd:#12161c;--color-bg-popup:#1b212b}
+/* drop-down list arrow (color matched to the theme) */
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e6e9ee' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")}

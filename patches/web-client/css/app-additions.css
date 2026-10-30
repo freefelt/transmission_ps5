@@ -1,0 +1,93 @@
+/* ps5: "Use temporary folder" is removed (the temporary folder is forbidden in the daemon) and the .torrent file chooser is hidden in the console browser */
+#incomplete-dir-div,input[data-key="incomplete_dir"],.ps5-console input[type="file"]{display:none!important}
+/* ps5: the tracker filter is hidden (always "All": it is not kept between runs and is off by default) */
+#filter-tracker{display:none}
+/* ps5: the status list and the Filter field have the same height and the same font (the PS5 browser draws them differently); the list width follows the
+   longest item, so the text always fits, whatever the console font is */
+#mainwin-statusbar select,#mainwin-statusbar #torrent-search{box-sizing:border-box;height:26px;font-family:inherit;font-size:14px}
+#mainwin-statusbar select{width:auto;min-width:0;padding:0 32px 0 10px;line-height:normal}
+#mainwin-statusbar #torrent-search{padding-top:0;padding-bottom:0}
+/* ps5: in normal (not compact) rows the speeds are on the right (ps5Peers from ps5-compat.js splits the line in two parts) */
+/* ps5: "Fix for USB drives" in the add-torrent dialog: the row with the checkbox and the "?" button, the explanation dialogs */
+#ps5-usbfix-row{display:flex;align-items:center;margin:0 0 15px}
+.open-torrent #ps5-usbfix-row input{margin:0 3px 0 4px}
+.open-torrent #ps5-usbfix-label{margin-left:5px}
+.open-torrent #ps5-usbfix-row .ps5-help-btn{margin:0 0 0 8px}
+.ps5-help-btn{appearance:none;width:22px;height:22px;border-radius:50%;padding:0;line-height:20px;text-align:center;font-weight:700;border:1px solid var(--color-border-default);background:var(--color-bg-primary);color:var(--color-fg-primary);cursor:pointer}
+/* ps5: the "Folder" button on the toolbar: the icon above the label, like the other buttons */
+#mainwin-toolbar #toolbar-openfolder svg{display:block;margin:0 auto}
+/* ps5: download folder tiles (add dialog, "Set Torrent Location", Transmission settings) */
+.dialog-container.open-torrent{max-width:min(760px,calc(100vw - 20px))}
+/* ps5: smooth appearance and disappearance of dialogs, menus and the inspector (duration and behavior: ps5-compat.js; no animation for prefers-reduced-motion) */
+@keyframes ps5dlgin{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes ps5dlgout{from{opacity:1;transform:none}to{opacity:0;transform:translateY(10px) scale(.97)}}
+@keyframes ps5menuin{from{opacity:0;transform:translateY(-8px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes ps5menuout{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-6px) scale(.97)}}
+dialog.dialog-container.popup,#prefs-dialog{animation:ps5dlgin 190ms ease backwards}
+.context-menu,.overflow-menu{animation:ps5menuin 150ms ease backwards;transform-origin:top right}
+dialog.dialog-container.popup.ps5-out,#prefs-dialog.ps5-out{animation:ps5dlgout 150ms ease both;pointer-events:none}
+.context-menu.ps5-out,.overflow-menu.ps5-out{animation:ps5menuout 120ms ease both;pointer-events:none}
+#mainwin-workarea{overflow-x:hidden}
+@keyframes ps5tabnext{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
+@keyframes ps5tabprev{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:none}}
+.tabs-pages[data-ps5dir=next]>.tabs-page:not(.hidden){animation:ps5tabnext 210ms ease backwards}
+.tabs-pages[data-ps5dir=prev]>.tabs-page:not(.hidden){animation:ps5tabprev 210ms ease backwards}
+/* ps5: the tab switches (inspector and settings) and the outer file priority buttons are rounded more (left and right, the middle "-" stays square) */
+.tabs-buttons{border-radius:14px}
+.tabs-buttons button,.tabs-button,.tabs-button.selected,.tabs-button:active,.tabs-button:checked{border-radius:12px}
+.file-priority-radiobox>.low{border-radius:7px 0 0 7px}
+.file-priority-radiobox>.high{border-radius:0 7px 7px 0}
+@media (prefers-reduced-motion:reduce){dialog.dialog-container.popup,#prefs-dialog,.context-menu,.overflow-menu,.ps5-out,.tabs-page{animation:none!important}}
+#mainwin-statusbar>span:first-child{margin-right:10px}
+#inspector-file-list .inspector-torrent-file-list-entry .inspector-torrent-file-list-entry-name{display:flex;align-items:center;gap:7px}
+.ps5-fico{flex:none;width:19px;height:19px}.ps5-fico.dir{color:#e3a63a}.ps5-fico.file{color:#e8edf5}
+#inspector-file-list .ps5-dir .inspector-torrent-file-list-entry-name{font-weight:600}
+.ps5-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 15px}
+.prefs-torrents-page .ps5-tiles{grid-column:1/-1}
+.ps5-tiles-note{grid-column:1/-1;font-size:13px;line-height:1.35;opacity:.85}
+.ps5-tile{appearance:none;display:flex;align-items:center;gap:10px;min-width:0;margin:0;padding:8px 10px;text-align:left;font:inherit;border:1px solid var(--color-border-default);border-radius:10px;background:var(--color-bg-primary);color:var(--color-fg-primary);cursor:pointer}
+.ps5-tile .ps5-disk-ico{flex:none;width:28px;height:28px}
+.ps5-tile-body{display:flex;flex-direction:column;min-width:0}
+.ps5-tile-path{font-size:14px;font-weight:600;word-break:break-all}
+.ps5-tile-sub{margin-top:2px;font-size:12px;opacity:.85}
+.ps5-tile-sub .bad{color:var(--color-fg-error,#e5534b)}
+.ps5-tile.sel{border-color:#6272e6;box-shadow:0 0 0 1px #6272e6 inset;background:var(--color-bg-hover)}
+.ps5-tile.off{opacity:.5;cursor:not-allowed}
+@keyframes ps5fade{from{opacity:0}to{opacity:1}}
+@keyframes ps5pop{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.ps5-modal{animation:ps5fade 180ms ease both}
+.ps5-modal .ps5-modal-box{animation:ps5pop 180ms ease both}
+@keyframes ps5fadeout{from{opacity:1}to{opacity:0}}
+@keyframes ps5popout{from{opacity:1;transform:none}to{opacity:0;transform:translateY(8px) scale(.98)}}
+.ps5-modal.ps5-out{animation:ps5fadeout 140ms ease both;pointer-events:none}
+.ps5-modal.ps5-out .ps5-modal-box{animation:ps5popout 140ms ease both}
+@media (prefers-reduced-motion:reduce){.ps5-modal,.ps5-modal .ps5-modal-box,.ps5-modal.ps5-out,.ps5-modal.ps5-out .ps5-modal-box{animation:none}}
+.ps5-modal{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:14px}
+.ps5-modal-box{max-width:540px;max-height:88vh;overflow:auto;background:var(--color-bg-popup);color:var(--color-fg-on-popup);border:1px solid var(--color-dialog-border);border-radius:10px;padding:16px 18px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.ps5-modal-box h3{margin:0 0 10px;font-size:18px}
+.ps5-modal-box p{margin:0 0 10px;line-height:1.4;font-size:14px}
+.ps5-modal-buttons{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.ps5-modal-buttons button{appearance:none;background:var(--color-bg-primary);border:1px solid var(--color-border-default);border-radius:5px;color:var(--color-fg-primary);padding:8px 14px;cursor:pointer}
+.ps5-modal-buttons button.danger{background:#a4472f;border-color:#a4472f;color:#fff}
+/* ps5: in full rows the torrent path is on the right in the row with the size (the same value as "Location" in the inspector) */
+#torrent-list .torrent:not(.compact) .torrent-progress-details[data-ps5-dir]{display:flex;justify-content:space-between;align-items:center;gap:12px}
+#torrent-list .torrent:not(.compact) .torrent-progress-details[data-ps5-dir]::after{content:attr(data-ps5-dir);flex:none;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:4px}
+.torrent-peer-details:not(.compact){display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.torrent-peer-details .ps5-peers-left{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.torrent-peer-details .ps5-peers-speed{flex:none;white-space:nowrap;padding-right:4px}
+/* ps5: in normal rows (not compact) the progress bar is a bit further from the rows above and below: it was 3 px, now 5 px, on both sides */
+#torrent-list .torrent-progress-bar:not(.compact){margin-top:4px}
+#torrent-list .torrent-peer-details:not(.compact){margin-top:3px}
+/* ps5: a small top margin of the page so the toolbar icons do not stick to the edge */
+#mainwin{box-sizing:border-box;padding-top:16px}
+/* ps5: the "free space on disks" panel (ps5-panel.js); it takes its colors from the theme when one is included */
+#ps5-diskbar{display:none;flex-wrap:wrap;gap:8px;margin:0 10px 12px;font-size:13px}
+#ps5-diskbar.has{display:flex}
+#ps5-diskbar .ps5-disk{display:flex;flex-direction:row;align-items:center;gap:12px;flex:1 1 330px;min-width:290px;padding:7px 12px;border:1px solid var(--color-border-default,#aeaeae);border-radius:12px;background-color:var(--ps5-card,transparent);color:var(--color-fg-primary)}
+#ps5-diskbar .ps5-disk-ico{flex:none;width:30px;height:30px}
+#ps5-diskbar .ps5-disk-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+#ps5-diskbar .ps5-disk-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ps5-diskbar .ps5-meter{height:6px;border-radius:3px;background-color:var(--color-border-default,#ccc);overflow:hidden}
+#ps5-diskbar .ps5-meter i{display:block;height:100%;border-radius:3px;background-color:var(--color-progressbar-leech,#3b82f6)}
+#ps5-diskbar .ps5-disk.warn .ps5-meter i{background-color:#d9a21b}
+#ps5-diskbar .ps5-disk.crit .ps5-meter i{background-color:#e5484d}

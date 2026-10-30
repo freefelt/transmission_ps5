@@ -1,0 +1,73 @@
+Subject: new RPC method ps5_folders
+
+Returns the download folders list with the disk state (path, kind = ssd | usb | int, mounted,
+total, free) for the folder tiles of the web interface (add dialog, Set location, Transmission
+preferences). Implemented in the daemon wrapper (ps5tm_guard_folder_count/_info); read only.
+
+---
+diff --git a/libtransmission/rpcimpl.cc b/libtransmission/rpcimpl.cc
+index 49e02be..564579a 100644
+--- a/libtransmission/rpcimpl.cc
++++ b/libtransmission/rpcimpl.cc
+@@ -57,6 +57,9 @@ extern "C" int ps5tm_guard_check_location(char const* location, char* msg, size_
+ // PS5 guard v7: the choice of the "USB disk fix" for a torrent (see src/daemon/guard.c)
+ extern "C" int ps5tm_guard_usbfix_mode(char const* hash, char const* dir);
+ extern "C" void ps5tm_guard_usbfix_set(char const* hash, int enabled);
++// PS5 guard v8: the download folders list with the state of the disks (implemented in the daemon wrapper)
++extern "C" int ps5tm_guard_folder_count(void);
++extern "C" int ps5tm_guard_folder_info(int index, char* path, size_t path_size, char* kind, size_t kind_size, int* mounted, long long* total, long long* free_bytes);
+ extern "C" int ps5tm_guard_check_source(char const* dir, char* msg, size_t msg_size);
+ extern "C" int ps5tm_guard_check_session_dir(char const* path, int kind, char* msg, size_t msg_size);
+ extern "C" int ps5tm_guard_default_dir(char const* session_dir, char* out, size_t out_size);
+@@ -2874,6 +2877,36 @@ using SessionAccessors = std::pair<SessionGetter, SessionSetter>;
+ 
+ // ---
+ 
++// PS5 guard v8: the method ps5_folders: result.folders = [{ path, kind (ssd | usb | int), mounted, total, free }, ...] in the order of the download folders list
++[[nodiscard]] std::pair<JsonRpc::Error::Code, std::string> ps5Folders(tr_session* /*session*/, tr_variant::Map const& /*args_in*/, tr_variant::Map& args_out)
++{
++    auto folders = tr_variant::Vector{};
++    int const count = ps5tm_guard_folder_count();
++    for (int i = 0; i < count; ++i)
++    {
++        char path[1024] = { 0 };
++        char kind[16] = { 0 };
++        int mounted = 0;
++        long long total = 0;
++        long long free_bytes = 0;
++        if (ps5tm_guard_folder_info(i, path, sizeof(path), kind, sizeof(kind), &mounted, &total, &free_bytes) != 0)
++        {
++            continue;
++        }
++
++        auto item = tr_variant::Map{ 5U };
++        item.try_emplace(tr_quark_new("path"sv), std::string_view{ path });
++        item.try_emplace(tr_quark_new("kind"sv), std::string_view{ kind });
++        item.try_emplace(tr_quark_new("mounted"sv), mounted != 0);
++        item.try_emplace(tr_quark_new("total"sv), static_cast<int64_t>(total));
++        item.try_emplace(tr_quark_new("free"sv), static_cast<int64_t>(free_bytes));
++        folders.emplace_back(std::move(item));
++    }
++
++    args_out.try_emplace(tr_quark_new("folders"sv), std::move(folders));
++    return { JsonRpc::Error::SUCCESS, {} };
++}
++
+ using SyncHandler = std::pair<JsonRpc::Error::Code, std::string> (*)(tr_session*, tr_variant::Map const&, tr_variant::Map&);
+ 
+ auto const sync_handlers = small::max_size_map<tr_quark, std::pair<SyncHandler, bool /*has_side_effects*/>, 20U>{ {
+@@ -3019,6 +3052,14 @@ void tr_rpc_request_exec_impl(tr_session* session, tr_variant& request, tr_rpc_r
+         return;
+     }
+ 
++    // PS5 guard v8: our own method (it is not put into the sync_handlers table: the quark keys are created at start, and the table is static)
++    if (method_name == "ps5_folders"sv)
++    {
++        auto const [ps5_err, ps5_errmsg] = ps5Folders(session, *params, data->args_out);
++        tr_rpc_idle_done(data, ps5_err, ps5_errmsg);
++        return;
++    }
++
+     // couldn't find a handler
+     tr_rpc_idle_done(data, Error::METHOD_NOT_FOUND, {});
+ }

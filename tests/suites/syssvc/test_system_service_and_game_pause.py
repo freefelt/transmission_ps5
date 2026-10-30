@@ -1,0 +1,68 @@
+import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "lib"))
+import sys, json, time, os, re, base64, hashlib, subprocess, urllib.request
+from harness import *
+import harness; harness.SYS_HELPER = True       # the manager starts the helper itself on start
+GP = "/data/Transmission/game_paused.txt"
+def bell(): c, t = api("GET", "/api/notifications"); return [i["text"] for i in json.loads(t)["items"]] if c == 200 else []
+def meta(name): return base64.b64encode(bencode({"announce": "http://127.0.0.1:1/announce", "info": {"name": name, "length": 65536, "piece length": 65536, "pieces": hashlib.sha1(name.encode()).digest()}})).decode()
+def st(): return {t["name"]: t["status"] for t in rpc("torrent-get", fields=["name", "status"])["arguments"]["torrents"]}
+def sysvc(): return json.loads(api("GET", "/api/state")[1])["stats"]["syssvc"]
+def setmode(m): return api("POST", "/api/config", {"game_pause": m})
+def astate_cfg(k): return json.loads(api("GET", "/api/state")[1])["config"][k]
+def game(on=False, minimised=False):
+    for f, want in (("/tmp/ps5tm_sys_app", on), ("/tmp/ps5tm_sys_suspended", minimised)):
+        if want: open(f, "w").write("PPSA99000\n")
+        elif os.path.exists(f): os.remove(f)
+for f in ("/tmp/ps5tm_sys_app", "/tmp/ps5tm_sys_suspended", "/tmp/ps5tm_sys_mode", "/tmp/ps5tm_sys_crash", "/tmp/ps5tm_sys_calls.log", "/tmp/ps5tm_sys_notify.log", GP):
+    if os.path.exists(f): os.remove(f)
+fresh(); loader = Loader(); m = start_manager()
+try:
+    wait(lambda: daemon_pids() and rpc_ok() and dstate()["state"] == "running", 70)
+    ok = wait(lambda: sysvc().get("ready") is True, 40)
+    check("the system service is started BY THE MANAGER itself a few seconds after its start (nothing pressed): ready, no helper process", ok and not subprocess.run(["pgrep", "-x", "transmission_s."], capture_output=True).stdout.strip(), sysvc())
+    check("the manager log says so", wait(lambda: "syssvc: ready" in shim(), 8), [l for l in shim().split("\n") if "syssvc" in l][:2])
+    for n, paused in (("g_a", False), ("g_b", False), ("g_user", True)): rpc("torrent-add", metainfo=meta(n), paused=paused)
+    time.sleep(2); s0 = st()
+    check("setup: two running torrents and one that the USER stopped", s0["g_a"] != 0 and s0["g_b"] != 0 and s0["g_user"] == 0, s0)
+    game(on=True); time.sleep(10); s1 = st()
+    check("setting 'Не ставить' (default): a game on the screen changes nothing", s1["g_a"] != 0 and s1["g_b"] != 0 and not os.path.exists(GP), s1)
+    game(); setmode("screen"); time.sleep(4)
+    game(on=True); time.sleep(2.5); game(); time.sleep(10); s_d = st()
+    check("DELAY BEFORE PAUSING: the game flashes on the screen for 2.5 s (choosing 'Close' in the game menu) and goes away: the downloads are NOT paused (the 5 second delay never ran out)", s_d["g_a"] != 0 and s_d["g_b"] != 0 and not os.path.exists(GP), s_d)
+    setmode("off"); game(on=True)
+    c, _ = setmode("screen"); ok = wait(lambda: st()["g_a"] == 0 and st()["g_b"] == 0, 25); s2 = st(); time.sleep(1)
+    check("setting 'только когда игра на экране': the two running torrents are paused, the user's one stays stopped; the list of what we paused is saved (2 lines)", c == 200 and ok and s2["g_user"] == 0 and len([l for l in open(GP).read().split() if l.startswith("R")]) == 2, (s2, open(GP).read() if os.path.exists(GP) else None))
+    check("/api/state tells that the pause comes from a game (stats.game_pause_active): the page then writes 'на паузе 2 (запущена игра)'", json.loads(api("GET", "/api/state")[1])["stats"]["game_pause_active"] is True, None)
+    check("the bell says it: 'Игра на экране: приостановлено закачек: 2'", any("Игра на экране: приостановлено закачек: 2" in x for x in bell()), [x[:70] for x in bell()][-3:])
+    check("the same message went to the CONSOLE as a notification (checkbox 'notify_game_pause' is on by default)", "Игра на экране: приостановлено закачек: 2" in open("/tmp/mgr.out", encoding="utf-8", errors="replace").read() and astate_cfg("notify_game_pause") is True, astate_cfg("notify_game_pause"))
+    game(on=True, minimised=True); time.sleep(12); game(on=True); time.sleep(32)
+    check("DELAY BEFORE RESUMING: the game is minimised for only 12 seconds and comes back: nothing is resumed (the 30 second delay never ran out)", st()["g_a"] == 0 and st()["g_b"] == 0 and os.path.exists(GP), st())
+    t0 = time.time(); game(on=True, minimised=True); ok = wait(lambda: st()["g_a"] != 0 and st()["g_b"] != 0, 70); s3 = st(); took = time.time() - t0; time.sleep(1)
+    check("... and when it stays minimised, the downloads resume only after about 30 seconds (not at once)", ok and 25 <= took <= 60, f"{took:.0f} s")
+    check("after the resume the state says that the pause is over (game_pause_active is false)", json.loads(api("GET", "/api/state")[1])["stats"]["game_pause_active"] is False, None)
+    check("the game is MINIMISED: with this setting the downloads are resumed (only those we paused), the user's torrent stays stopped, the list is removed", ok and s3["g_user"] == 0 and not os.path.exists(GP), (s3, os.path.exists(GP)))
+    check("the bell says: 'Игра свёрнута: возобновлено закачек: 2'", any("Игра свёрнута: возобновлено закачек: 2" in x for x in bell()), [x[:70] for x in bell()][-3:])
+    c, _ = setmode("running"); ok = wait(lambda: st()["g_a"] == 0 and st()["g_b"] == 0, 25)
+    check("setting 'пока игра запущена, включая свёрнутую': the minimised game pauses them again", c == 200 and ok and os.path.exists(GP) and any("Игра запущена (свёрнута): приостановлено закачек: 2" in x for x in bell()), (st(), [x[:60] for x in bell()][-2:]))
+    game(on=True, minimised=False); time.sleep(8)
+    check("bringing the game back to the screen keeps them paused (no second pause, no resume)", st()["g_a"] == 0 and st()["g_b"] == 0, st())
+    game(); ok = wait(lambda: st()["g_a"] != 0 and st()["g_b"] != 0, 70); s5 = st(); time.sleep(1)
+    check("the game is CLOSED: both are resumed, the user's torrent still stopped, bell 'Игра закрыта: возобновлено закачек: 2'", ok and s5["g_user"] == 0 and not os.path.exists(GP) and any("Игра закрыта: возобновлено закачек: 2" in x for x in bell()), (s5, [x[:60] for x in bell()][-2:]))
+    print("== switching the setting off while the downloads are paused")
+    api("POST", "/api/config", {"notify_game_pause": False})
+    setmode("screen"); game(on=True); wait(lambda: st()["g_a"] == 0 and st()["g_b"] == 0, 25); c, _ = setmode("off"); ok = wait(lambda: st()["g_a"] != 0 and st()["g_b"] != 0, 25)
+    check("'Не ставить' while paused: the downloads are resumed at once even though the game is still on the screen; with the checkbox off the message is only in the bell, not on the console", c == 200 and ok and any("Пауза во время игры выключена: возобновлено закачек: 2" in x for x in bell()) and "Пауза во время игры выключена: возобновлено" not in open("/tmp/mgr.out", encoding="utf-8", errors="replace").read(), [x[:70] for x in bell()][-2:])
+    api("POST", "/api/config", {"notify_game_pause": True})
+    print("== the system service hangs while the downloads are paused: they must not stay paused forever")
+    setmode("screen"); wait(lambda: st()["g_a"] == 0 and st()["g_b"] == 0, 25)
+    open("/tmp/ps5tm_sys_mode", "w").write("hang\n")
+    t0 = time.time(); ok = wait(lambda: st()["g_a"] != 0 and st()["g_b"] != 0, 130)
+    check("after about a minute without an answer about the game state the paused downloads are resumed (fail-safe) and the bell says why (without naming any service)", ok and 50 <= time.time() - t0 <= 125 and any("Не удаётся определить, запущена ли игра" in x and "возобновлены: 2" in x for x in bell()), (f"{time.time()-t0:.0f} s", [x[:80] for x in bell()][-2:]))
+    check("a call that does not return for 30 s switches the service off (hung) and the bell says so", wait(lambda: sysvc().get("hung") is True, 40) and any("не вернулся за 30 с" in x for x in bell()), (sysvc(), [x[:60] for x in bell()][-2:]))
+finally:
+    for f in ("/tmp/ps5tm_sys_app", "/tmp/ps5tm_sys_suspended", "/tmp/ps5tm_sys_mode"):
+        if os.path.exists(f): os.remove(f)
+    kill_all()
+    try: loader.close()
+    except Exception: pass
+sys.exit(summary())

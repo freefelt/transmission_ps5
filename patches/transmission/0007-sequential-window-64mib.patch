@@ -1,0 +1,50 @@
+Subject: sequential mode requests only pieces within 64 MiB
+
+Peers connected at a given moment often only have far pieces; writing such a piece stretches
+the file to its offset (tens of minutes of zero filling on exFAT/FAT32). In sequential mode
+only pieces not further than 64 MiB from the first incomplete block are requested.
+
+---
+diff --git a/libtransmission/peer-mgr-wishlist.cc b/libtransmission/peer-mgr-wishlist.cc
+index ae11c99..0b14c5c 100644
+--- a/libtransmission/peer-mgr-wishlist.cc
++++ b/libtransmission/peer-mgr-wishlist.cc
+@@ -581,6 +581,25 @@ std::vector<tr_block_span_t> Wishlist::Impl::next(
+         return {};
+     }
+ 
++    // PS5 guard v6: the "in order" window: compute the limit (in blocks of 16 KiB): the first block not yet downloaded + 64 MiB. Pieces beyond the limit are not requested.
++    auto window_limit = static_cast<tr_block_index_t>(-1);
++    if (!std::empty(candidates_) && candidates_.front().sequential)
++    {
++        auto head = static_cast<tr_block_index_t>(-1);
++        for (auto const& c : candidates_)
++        {
++            head = std::min(head, c.block_span.begin);
++        }
++
++        // a window of 64 MiB (4096 blocks of 16 KiB), but at least two pieces (for torrents with very large pieces)
++        auto const& first = candidates_.front();
++        auto const window_blocks = std::max(tr_block_index_t{ 4096U }, tr_block_index_t{ 2U * (first.raw_block_span.end - first.raw_block_span.begin) });
++        if (head <= static_cast<tr_block_index_t>(-1) - window_blocks)
++        {
++            window_limit = head + window_blocks;
++        }
++    }
++
+     auto blocks = small::vector<tr_block_index_t>{};
+     blocks.reserve(n_wanted_blocks);
+     for (auto const& candidate : candidates_)
+@@ -600,6 +619,12 @@ std::vector<tr_block_span_t> Wishlist::Impl::next(
+             continue;
+         }
+ 
++        // PS5 guard v6: a piece beyond the window waits (a write that far would stretch the file: on exFAT that means filling with zeroes)
++        if (candidate.block_span.begin > window_limit)
++        {
++            continue;
++        }
++
+         // walk the blocks in this piece that we don't have or not requested
+         auto const n_to_add = std::min(std::size(candidate.unrequested), n_wanted_blocks - n_added);
+         std::copy_n(std::rbegin(candidate.unrequested), n_to_add, std::back_inserter(blocks));

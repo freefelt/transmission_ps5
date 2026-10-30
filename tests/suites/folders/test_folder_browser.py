@@ -1,0 +1,63 @@
+import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "lib"))
+import sys, json, time, os, subprocess, shutil
+from harness import *
+import harness; harness.AUTO_FOLDER = False
+# The folder picker: the list of the drive's subfolders and creating a folder (/api/fs), only in allowed places
+def sh(c): return subprocess.run(c, shell=True, capture_output=True, text=True)
+def fs(**b): c, t = api("POST", "/api/fs", b); return c, (json.loads(t) if t.startswith("{") else {"raw": t})
+def cleanup():
+    for d in ("/mnt/usb2", "/mnt/ext1"): sh(f"umount {d} 2>/dev/null; rm -rf {d}")
+    sh("rm -rf /data/g47")
+cleanup(); shutil.rmtree("/user/app", ignore_errors=True); os.makedirs("/user/app")
+for d in ("/mnt/usb2", "/mnt/ext1"): os.makedirs(d, exist_ok=True); sh(f"mount -t tmpfs -o size=64m tmpfs {d}")
+for p in ("Games", "torrents", "Alpha", "beta", ".hidden", "lost+found", "System Volume Information", "Z_last"): os.makedirs(f"/mnt/ext1/{p}", exist_ok=True)
+open("/mnt/ext1/file.txt", "w").write("x"); os.makedirs("/mnt/ext1/torrents/sub1/deep", exist_ok=True); os.symlink("/mnt/ext1/Games", "/mnt/ext1/link_to_games")
+os.makedirs("/data/g47/inner", exist_ok=True)
+fresh(); loader = Loader(); m = start_manager()
+try:
+    wait(lambda: daemon_pids() and rpc_ok() and dstate()["state"] == "running", 70); time.sleep(3)
+    c, j = fs(action="list", path="/mnt/ext1")
+    names = j.get("dirs", [])
+    check("list: only folders (no files), sorted ignoring case, folders starting with a dot and the service folders are hidden; a link to a folder is a folder", c == 200 and names == ["Alpha", "beta", "Games", "link_to_games", "torrents", "Z_last"] and j["path"] == "/mnt/ext1" and j["root"] == "/mnt/ext1" and j["truncated"] is False, (c, names))
+    c, j = fs(action="list", path="/mnt/ext1/torrents/")
+    check("list of a subfolder (a trailing slash is normalised): its path comes back", c == 200 and j["path"] == "/mnt/ext1/torrents" and j["dirs"] == ["sub1"], (c, j))
+    c, j = fs(action="list", path="/data/g47")
+    check("the internal disk (/data/...) can be browsed too", c == 200 and j["root"] == "/data" and j["dirs"] == ["inner"], (c, j))
+    c, j = fs(action="list", path="/data")
+    check("/data itself can be browsed (a folder is chosen inside it) and the service folder Transmission is hidden", c == 200 and j["path"] == "/data" and j["root"] == "/data" and "g47" in j["dirs"] and "Transmission" not in j["dirs"], (c, j.get("dirs", [])[:8]))
+    c, j = fs(action="mkdir", path="/data", name="g47_new")
+    check("a folder can be created directly inside /data", c == 200 and j.get("path") == "/data/g47_new" and os.path.isdir("/data/g47_new"), (c, j))
+    shutil.rmtree("/data/g47_new", ignore_errors=True)
+    for bad in ("/etc", "/user/data", "/mnt/sandbox", "/mnt/ext1/../../etc", "relative", ""):
+        c, j = fs(action="list", path=bad)
+        if not (c == 400 and j.get("error")): print("   not refused:", repr(bad), c, j)
+    check("places outside the allowed ones (/etc, /user/data, /mnt/sandbox, '..' tricks, a relative path, an empty path) are refused with a message", all(fs(action="list", path=b)[0] == 400 for b in ("/etc", "/user/data", "/mnt/sandbox", "/mnt/ext1/../../etc", "relative", "")), None)
+    c, j = fs(action="list", path="/mnt/ext1/nothing_here")
+    check("a folder that does not exist: a clear message", c == 400 and "нет" in j.get("error", "") or "not exist" in j.get("error", ""), (c, j))
+    for i in range(520): os.makedirs(f"/mnt/usb2/d{i:03d}", exist_ok=True)
+    c, j = fs(action="list", path="/mnt/usb2")
+    check("a folder with more than 500 subfolders shows the first 500 and says that it is cut", c == 200 and len(j["dirs"]) == 500 and j["truncated"] is True and j["dirs"][0] == "d000", (c, len(j.get("dirs", [])), j.get("truncated")))
+    c, j = fs(action="mkdir", path="/mnt/ext1/torrents", name="New folder 1")
+    check("mkdir: the folder is created and its path comes back (the picker goes into it)", c == 200 and j.get("ok") and j["path"] == "/mnt/ext1/torrents/New folder 1" and os.path.isdir("/mnt/ext1/torrents/New folder 1"), (c, j))
+    c2, j2 = fs(action="mkdir", path="/mnt/ext1/torrents", name="New folder 1")
+    check("the same name again: 'a folder with this name already exists'", c2 == 400 and ("уже есть" in j2.get("error", "") or "already exists" in j2.get("error", "")), (c2, j2))
+    bad_ok = True
+    for name in ("", "   ", ".hidden2", "a/b", "a\\b", "x" * 130, "tab\tname", ".."):
+        cc, jj = fs(action="mkdir", path="/mnt/ext1/torrents", name=name)
+        if cc != 400: bad_ok = False; print("   name accepted:", repr(name), cc, jj)
+    check("bad names are refused: empty, spaces, a leading dot, a slash or a backslash, longer than 120, a control character, '..'", bad_ok, None)
+    cc, jj = fs(action="mkdir", path="/etc", name="evil"); cd, jd = fs(action="mkdir", path="/mnt/ext1/../../tmp", name="evil2")
+    check("folders cannot be created outside the allowed places", cc == 400 and cd == 400 and not os.path.exists("/etc/evil") and not os.path.exists("/tmp/evil2"), (cc, cd))
+    c, j = fs(action="mkdir", path="/mnt/ext1/torrents", name="  Spaced  ")
+    check("spaces around a name are cut off", c == 200 and j["path"] == "/mnt/ext1/torrents/Spaced", (c, j))
+    c, j = fs(action="mkdir", path="/mnt/ext1/Папка 日本")
+    check("a missing 'name' is a bad name", c == 400, (c, j))
+    c, j = fs(action="mkdir", path="/mnt/ext1", name="Папка 日本")
+    check("a name in Russian and with other scripts is fine", c == 200 and os.path.isdir("/mnt/ext1/Папка 日本"), (c, j))
+    c, j = fs(action="unknown", path="/mnt/ext1")
+    check("an unknown action is refused", c == 400, (c, j))
+finally:
+    kill_all(); cleanup()
+    try: loader.close()
+    except Exception: pass
+sys.exit(summary())

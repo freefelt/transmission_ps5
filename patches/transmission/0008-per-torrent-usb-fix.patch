@@ -1,0 +1,88 @@
+Subject: the 'USB disk fix' is chosen for every torrent
+
+ 1) torrent-add accepts the optional ps5_usb_fix (bool) parameter
+ 2) the choice is remembered per torrent hash (usbfix_off.txt in the daemon folder holds the
+    torrents whose fix is OFF); the fix is on by default for disks that need it
+ 3) tr_torrent::start applies the choice on every start (also after a daemon restart);
+    moving a torrent to a USB disk (torrent-set-location) enables the fix unless it is off
+
+---
+diff --git a/libtransmission/rpcimpl.cc b/libtransmission/rpcimpl.cc
+index e058962..49e02be 100644
+--- a/libtransmission/rpcimpl.cc
++++ b/libtransmission/rpcimpl.cc
+@@ -54,6 +54,9 @@ using namespace libtransmission::Values;
+ // PS5 guard v1: protection of the download folders. The functions live in the daemon wrapper (src/daemon/guard.c); 0 = allowed, otherwise msg holds the error text.
+ extern "C" int ps5tm_guard_check_add(char const* requested, char const* session_dir, char* resolved, size_t resolved_size, char* msg, size_t msg_size);
+ extern "C" int ps5tm_guard_check_location(char const* location, char* msg, size_t msg_size);
++// PS5 guard v7: the choice of the "USB disk fix" for a torrent (see src/daemon/guard.c)
++extern "C" int ps5tm_guard_usbfix_mode(char const* hash, char const* dir);
++extern "C" void ps5tm_guard_usbfix_set(char const* hash, int enabled);
+ extern "C" int ps5tm_guard_check_source(char const* dir, char* msg, size_t msg_size);
+ extern "C" int ps5tm_guard_check_session_dir(char const* path, int kind, char* msg, size_t msg_size);
+ extern "C" int ps5tm_guard_default_dir(char const* session_dir, char* out, size_t out_size);
+@@ -1447,6 +1450,11 @@ namespace make_torrent_field_helpers
+     for (auto* tor : getTorrents(session, args_in))
+     {
+         tor->set_location(*location, move_flag, nullptr);
++        // PS5 guard v7: the torrent was moved to a USB disk: the "USB disk fix" is turned on (unless it was turned off for this torrent)
++        if (auto const ps5_mode = ps5tm_guard_usbfix_mode(tor->info_hash_string().c_str(), std::string{ *location }.c_str()); ps5_mode >= 0)
++        {
++            tor->set_sequential_download(ps5_mode != 0);
++        }
+         session->rpcNotify(TR_RPC_TORRENT_MOVED, tor);
+     }
+ 
+@@ -1695,6 +1703,13 @@ void add_torrent_impl(struct tr_rpc_idle_data* data, tr_ctor& ctor)
+         return;
+     }
+ 
++    // PS5 guard v7: the choice of the "USB disk fix" is remembered by the hash of the torrent and applied at once (the torrent may already have started with the default fix).
++    if (auto const& ps5_fix = ctor.sequential_download(TR_FORCE); ps5_fix.has_value())
++    {
++        ps5tm_guard_usbfix_set(tor->info_hash_string().c_str(), *ps5_fix ? 1 : 0);
++        tor->set_sequential_download(*ps5_fix);
++    }
++
+     // PS5 guard v4: the state (it holds the folder the torrent was added to) is saved at once, not after 6 minutes: a forced restart must not lose the path.
+     tor->save_resume_file();
+ 
+@@ -1811,6 +1826,12 @@ void torrentAdd(tr_session* session, tr_variant::Map const& args_in, tr_rpc_idle
+         ctor.set_download_dir(TR_FORCE, ps5_resolved);
+     }
+ 
++    // PS5 guard v7: the optional parameter ps5_usb_fix (the check box "USB disk fix" in the add dialog)
++    if (auto const val = args_in.value_if<bool>(tr_quark_new("ps5_usb_fix"sv)))
++    {
++        ctor.set_sequential_download(TR_FORCE, *val);
++    }
++
+     if (auto const val = args_in.value_if<bool>(TR_KEY_paused))
+     {
+         ctor.set_paused(TR_FORCE, *val);
+diff --git a/libtransmission/torrent.cc b/libtransmission/torrent.cc
+index 5155863..792ccf0 100644
+--- a/libtransmission/torrent.cc
++++ b/libtransmission/torrent.cc
+@@ -610,6 +610,8 @@ extern "C" int ps5tm_guard_check_disk(char const* dir, int kind, char* msg, size
+ // PS5 guard v3: a log entry about the start and the flag "the torrent is on a USB disk" (implemented in the daemon wrapper, src/daemon/guard.c).
+ extern "C" void ps5tm_guard_log_start(char const* name, char const* dir);
+ extern "C" int ps5tm_guard_prefer_sequential(char const* dir);
++// PS5 guard v7: what to do with the "USB disk fix": 1 turn on (the folder is on USB and the fix is not turned off for the torrent), 0 turn off (turned off when added), -1 leave alone (not USB).
++extern "C" int ps5tm_guard_usbfix_mode(char const* hash, char const* dir);
+ 
+ void tr_torrent::start(bool bypass_queue, std::optional<bool> has_any_local_data)
+ {
+@@ -664,9 +666,10 @@ void tr_torrent::start(bool bypass_queue, std::optional<bool> has_any_local_data
+     // PS5 guard v3: log the folder of the torrent; on USB disks download in order (no writes at far offsets: on exFAT that means a long fill with zeroes).
+     {
+         ps5tm_guard_log_start(name().c_str(), current_dir().c_str());
+-        if (ps5tm_guard_prefer_sequential(current_dir().c_str()) != 0)
++        // PS5 guard v7: the "USB disk fix" is on by default for torrents on a USB disk, except those where it was turned off when adding (the choice is kept by hash)
++        if (auto const ps5_mode = ps5tm_guard_usbfix_mode(info_hash_string().c_str(), current_dir().c_str()); ps5_mode >= 0)
+         {
+-            set_sequential_download(true);
++            set_sequential_download(ps5_mode != 0);
+         }
+     }
+ 

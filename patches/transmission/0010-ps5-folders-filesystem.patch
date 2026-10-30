@@ -1,0 +1,37 @@
+Subject: ps5_folders also returns the file system of the volume
+
+Adds fs ("exFAT", "FAT32", "UFS", "BFS") and fsbad (the volume needs the USB disk fix).
+
+---
+diff --git a/libtransmission/rpcimpl.cc b/libtransmission/rpcimpl.cc
+index 564579a..527fe03 100644
+--- a/libtransmission/rpcimpl.cc
++++ b/libtransmission/rpcimpl.cc
+@@ -60,6 +60,7 @@ extern "C" void ps5tm_guard_usbfix_set(char const* hash, int enabled);
+ // PS5 guard v8: the download folders list with the state of the disks (implemented in the daemon wrapper)
+ extern "C" int ps5tm_guard_folder_count(void);
+ extern "C" int ps5tm_guard_folder_info(int index, char* path, size_t path_size, char* kind, size_t kind_size, int* mounted, long long* total, long long* free_bytes);
++extern "C" int ps5tm_guard_folder_fs(int index, char* fs, size_t fs_size, int* bad);
+ extern "C" int ps5tm_guard_check_source(char const* dir, char* msg, size_t msg_size);
+ extern "C" int ps5tm_guard_check_session_dir(char const* path, int kind, char* msg, size_t msg_size);
+ extern "C" int ps5tm_guard_default_dir(char const* session_dir, char* out, size_t out_size);
+@@ -2894,12 +2895,18 @@ using SessionAccessors = std::pair<SessionGetter, SessionSetter>;
+             continue;
+         }
+ 
+-        auto item = tr_variant::Map{ 5U };
++        char fs[32] = { 0 };
++        int fsbad = 0;
++        ps5tm_guard_folder_fs(i, fs, sizeof(fs), &fsbad);
++
++        auto item = tr_variant::Map{ 7U };
+         item.try_emplace(tr_quark_new("path"sv), std::string_view{ path });
+         item.try_emplace(tr_quark_new("kind"sv), std::string_view{ kind });
+         item.try_emplace(tr_quark_new("mounted"sv), mounted != 0);
+         item.try_emplace(tr_quark_new("total"sv), static_cast<int64_t>(total));
+         item.try_emplace(tr_quark_new("free"sv), static_cast<int64_t>(free_bytes));
++        item.try_emplace(tr_quark_new("fs"sv), std::string_view{ fs });
++        item.try_emplace(tr_quark_new("fsbad"sv), fsbad != 0);
+         folders.emplace_back(std::move(item));
+     }
+ 

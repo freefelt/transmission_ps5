@@ -1,0 +1,29 @@
+/* look: rounded "cards", tidy fields and menus (the same for the dark and the light theme) */
+html{scrollbar-color:var(--color-border-stark) transparent}
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background-color:var(--color-border-stark);border:3px solid transparent;border-radius:8px;background-clip:padding-box}
+#mainwin-toolbar{box-sizing:border-box;padding:0 8px;box-shadow:0 1px 0 var(--color-border-default)}
+#mainwin-toolbar button{border-radius:10px;transition:background-color .12s ease}
+#mainwin-toolbar button:not(:disabled):hover{background-color:var(--color-bg-hover)}
+#mainwin-statusbar{box-sizing:border-box;padding:6px 12px;border-bottom:1px solid var(--color-border-default)}
+#torrent-container{padding:4px 0 12px}
+#torrent-list .torrent{margin:8px 12px;padding:4px 6px;border:1px solid var(--color-border-default);border-radius:14px}
+#torrent-list .torrent:nth-child(n){background-color:var(--ps5-card)}
+#torrent-list .torrent:hover{background-color:var(--color-bg-hover)}
+#torrent-list .torrent.selected{background-color:var(--color-bg-selected);border-color:var(--color-bg-selected);color:var(--color-fg-selected)}
+/* progress bar as a disk meter: no shared outline, the unfilled part is filled with the same color as the disk meter track
+   (--color-border-default), the fill has a rounded right edge (if the browser does not understand inset(... round ...), the previous clipping stays) */
+#torrent-list .torrent-progress-bar{border:0;border-radius:10px;height:20px;background-color:var(--color-border-default,#ccc)}
+/* percentage centered vertically in the bar (height 20 px = the row height) */
+#torrent-list .torrent-progress-bar:before,#torrent-list .torrent-progress-bar:after{border-radius:10px;line-height:20px}
+#torrent-list .torrent-progress-bar:after,#torrent-list .torrent-progress-bar.seed:not(.paused):after{background:transparent}
+#torrent-list .torrent-progress-bar:before{clip-path:inset(0 calc(100% - var(--progress,30%)) 0 0 round 10px)}
+select,input[type=text],input[type=search],input[type=number],input[type=password],input:not([type]),textarea{border:1px solid var(--color-border-stark);border-radius:8px;background-color:var(--ps5-field);color:var(--color-fg-primary);padding:3px 8px}
+select{-webkit-appearance:none;appearance:none;border-radius:10px;padding:3px 28px 3px 10px;background-repeat:no-repeat;background-position:right 9px center;background-size:12px 12px}
+.popup,.tabs-container,.context-menu{border:1px solid var(--color-border-default);border-radius:12px}
+.dialog-container,.dialog-window{border-radius:14px}
+.dialog-buttons button{border:1px solid var(--color-border-stark);border-radius:8px;background-color:var(--ps5-field);color:var(--color-fg-primary);padding:5px 14px}
+:root .contrast-more{--color-progressbar-seed-1:#1e8a45;--color-progressbar-seed-2:#fff}
+/* percentage text in bars without a shadow (upstream draws a soft shadow through these variables) */
+:root,:root .contrast-more{--progress-bar-shadow-1:none;--progress-bar-shadow-2:none;--progress-bar-shadow-3:none}

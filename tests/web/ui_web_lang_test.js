@@ -1,0 +1,36 @@
+const puppeteer = require("puppeteer-core");
+const http = require("http");
+let pass = 0, fail = 0; const check = (n, ok, e) => { (ok ? pass++ : fail++); console.log((ok ? "PASS " : "FAIL ") + n + (e !== undefined ? "  -> " + String(e).slice(0, 260) : "")); };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const post = (path, body) => new Promise((res) => { const d = JSON.stringify(body), q = http.request({ host: "127.0.0.1", port: 9092, path, method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(d) } }, (r) => { r.resume(); r.on("end", () => res(r.statusCode)); }); q.write(d); q.end(); });
+// The real Transmission web client (port 9091) in Chrome: translation inside the client code (ps5t/ps5n) in Russian and English, without JavaScript errors.
+(async () => {
+  const browser = await puppeteer.launch({ executablePath: require("./chrome"), args: ["--no-sandbox", "--disable-gpu"], headless: "new" });
+  const page = await browser.newPage(); await page.setViewport({ width: 1100, height: 800 }); const errors = []; page.on("pageerror", (e) => errors.push(e.message)); page.on("dialog", (d) => d.dismiss());
+  const open = async () => { await page.goto("http://127.0.0.1:9091/transmission/web/", { waitUntil: "networkidle2" }); await sleep(2500); };
+  const look = () => page.evaluate(() => ({ title: document.title, insp: document.getElementById("toolbar-inspector").textContent.trim(), ph: document.getElementById("torrent-search").placeholder, open: !!document.querySelector('[aria-label="Открыть торрент"]'), openEn: !!document.querySelector('[aria-label="Open torrent"]'), lang: window.PS5_I18N && window.PS5_I18N.lang, t1: window.ps5t("Open torrent…"), ago: window.ps5t("{1} ago", ["5 мин"]) }));
+  const menuTexts = async () => { await page.evaluate(() => { const b = document.getElementById("toolbar-overflow") || document.querySelector('[id*="overflow"]'); if (b) b.click(); }); await sleep(600); return page.evaluate(() => document.body.innerText); };
+  await post("/api/config", { language: "ru" }); await sleep(1500); await open();
+  let r = await look();
+  check("RU: the real web client is Russian: title, toolbar button, filter placeholder, aria-labels (translated inside the code and marked in index.html)", r.lang === "ru" && r.title === "Веб-интерфейс Transmission" && r.insp === "Инспектор" && r.ph === "Фильтр" && r.open && !r.openEn, JSON.stringify(r));
+  check("RU: ps5t works in the page: the English key gives the Russian text, a template takes its value", r.t1 === "Открыть торрент…" && r.ago === "5 мин назад", r.t1 + " | " + r.ago);
+  let txt = await menuTexts();
+  check("RU: the overflow menu (built by the client code) shows Russian items", /Статистика|Компактные строки|Сочетания клавиш/.test(txt), txt.replace(/\s+/g, " ").slice(0, 160));
+  check("RU: no JavaScript errors while the client builds all its texts through ps5t", errors.length === 0, errors.join(";"));
+  await post("/api/config", { web_openfolder: "bfpilot" }); await sleep(1500); await open();
+  await page.evaluate(async () => { const meta = btoa("d8:announce27:http://127.0.0.1:1/announce4:infod6:lengthi65536e4:name6:ru_one12:piece lengthi65536e6:pieces20:" + "\u0007".repeat(20) + "ee"); let sid = ""; for (let i = 0; i < 3; i++) { const r = await fetch("../rpc", { method: "POST", headers: { "X-Transmission-Session-Id": sid, "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", method: "torrent_add", params: { metainfo: meta, download_dir: "/data/torrents", paused: true }, id: 1 }) }); if (r.status === 409) { sid = r.headers.get("X-Transmission-Session-Id"); continue; } return r.status; } });
+  await open();
+  const rc = await page.evaluate(() => { const li = document.querySelector("#torrent-list .torrent"); li.scrollIntoView(); const r = li.getBoundingClientRect(); return { x: r.left + 60, y: r.top + 20 }; });
+  await page.mouse.click(rc.x, rc.y, { button: "right" }); await sleep(700);
+  const mi = await page.evaluate(() => { const m = document.querySelector(".context-menu"); if (!m) return null; const it = [...m.querySelectorAll(".context-menuitem")]; const i = it.findIndex((e) => e.classList.contains("ps5-openfolder")); return { i, n: it.length, text: i >= 0 ? it[i].textContent.trim() : "", prev: i > 0 ? it[i - 1].textContent.trim() : "" }; });
+  check("RU: 'Открыть папку' stands right after 'Указать расположение…' (as 'Open folder' after 'Set location…' in English), not at the end of the menu", !!mi && mi.i >= 0 && mi.text === "Открыть папку" && mi.prev === "Указать расположение…" && mi.i < mi.n - 1, JSON.stringify(mi));
+  await page.evaluate(() => document.body.click()); await sleep(300); await post("/api/config", { web_openfolder: "off" });
+  await page.keyboard.press("Escape");
+  await post("/api/config", { language: "en" }); await sleep(1500); await open();
+  r = await look();
+  check("EN: the same client is English again (nothing translated, nothing broken)", r.lang === "en" && r.title === "Transmission Web Interface" && r.insp === "Inspector" && r.ph === "Filter" && r.openEn && !r.open && r.t1 === "Open torrent…", JSON.stringify(r));
+  txt = await menuTexts();
+  check("EN: the overflow menu is English", /Statistics|Compact rows|Keyboard shortcuts/.test(txt) && !/Статистика/.test(txt), txt.replace(/\s+/g, " ").slice(0, 160));
+  check("EN: no JavaScript errors", errors.length === 0, errors.join(";"));
+  console.log(`\n${pass}/${pass + fail} web client language checks passed`); await browser.close(); process.exit(fail ? 1 : 0);
+})().catch((e) => { console.log("crashed", e); process.exit(2); });

@@ -1,0 +1,35 @@
+const puppeteer = require("puppeteer-core");
+const http = require("http");
+let pass = 0, fail = 0; const check = (n, ok, e) => { (ok ? pass++ : fail++); console.log((ok ? "PASS " : "FAIL ") + n + (e !== undefined ? "  -> " + String(e).slice(0, 260) : "")); };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const post = (body) => new Promise((res, rej) => { const d = JSON.stringify(body); const r = http.request({ host: "127.0.0.1", port: 9092, path: "/api/config", method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(d) } }, (x) => { let b = ""; x.on("data", (c) => (b += c)); x.on("end", () => res({ status: x.statusCode, body: b })); }); r.on("error", rej); r.end(d); });
+// "Show disk status": Do not show / Show used / Show active. Real Chrome against the real daemon.
+(async () => {
+  const browser = await puppeteer.launch({ executablePath: require("./chrome"), args: ["--no-sandbox", "--disable-gpu"], headless: "new" });
+  const page = await browser.newPage(); await page.setViewport({ width: 1100, height: 900 }); const errors = []; page.on("pageerror", (e) => errors.push(e.message));
+  const open = async () => { await page.goto("http://127.0.0.1:9091/transmission/web/", { waitUntil: "networkidle2" }); await sleep(2500); };
+  const rpc = (method, params) => page.evaluate(async (m, p) => { let sid = ""; for (let i = 0; i < 3; i++) { const r = await fetch("../rpc", { method: "POST", headers: { "X-Transmission-Session-Id": sid, "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", method: m, params: p || {}, id: 1 }) }); if (r.status === 409) { sid = r.headers.get("X-Transmission-Session-Id"); continue; } return await r.json(); } }, method, params);
+  const meta = (name, fill) => Buffer.concat([Buffer.from("d8:announce27:http://127.0.0.1:1/announce4:infod6:lengthi65536e4:name" + name.length + ":" + name + "12:piece lengthi65536e6:pieces20:"), Buffer.alloc(20, fill), Buffer.from("ee")]).toString("base64");
+  const state = () => page.evaluate(() => ({ cfg: JSON.stringify(window.PS5_CONFIG), bar: !!document.getElementById("ps5-diskbar"), disks: [...document.querySelectorAll("#ps5-diskbar .ps5-disk-text")].map((e) => e.textContent.split(":")[0]) }));
+  const setMode = async (m) => { const r = await post({ web_diskbar: m }); await open(); return r; };
+  await open();
+  for (const t of (await rpc("torrent_get", { fields: ["id"] })).result.torrents) await rpc("torrent_remove", { ids: [t.id], delete_local_data: true });
+  await rpc("torrent_add", { metainfo: meta("modes_running", 5), download_dir: "/mnt/ext1/torrents", paused: false });
+  await rpc("torrent_add", { metainfo: meta("modes_stopped", 6), download_dir: "/mnt/usb0/torrents", paused: true });
+  const ids = {}; for (const t of (await rpc("torrent_get", { fields: ["id", "name", "status"] })).result.torrents) ids[t.name] = t;
+  check("setup: one running torrent on the M.2 disk and one stopped torrent on the USB disk", ids.modes_running && ids.modes_running.status !== 0 && ids.modes_stopped && ids.modes_stopped.status === 0, JSON.stringify(Object.values(ids).map((t) => [t.name, t.status])));
+  let r = await setMode("all"); let s = await state();
+  check("'Показывать используемые': the page is told diskbarMode 'all' and the panel shows BOTH disks (the one with the running torrent and the one with only a stopped torrent)", r.status === 200 && /diskbarMode":"all/.test(s.cfg) && s.bar && s.disks.join() === "/mnt/ext1,/mnt/usb0", JSON.stringify(s));
+  await setMode("active"); s = await state();
+  check("'Показывать активные': only the disk of the RUNNING torrent is shown (the USB disk with a stopped torrent disappears)", /diskbarMode":"active/.test(s.cfg) && s.bar && s.disks.join() === "/mnt/ext1", JSON.stringify(s));
+  await rpc("torrent_start", { ids: [ids.modes_stopped.id] }); await sleep(800); await rpc("torrent_stop", { ids: [ids.modes_running.id] }); await sleep(800); await open(); s = await state();
+  check("start the USB torrent and stop the M.2 one: the panel follows after a refresh (now only the USB disk)", s.disks.join() === "/mnt/usb0", JSON.stringify(s));
+  await rpc("torrent_stop", { ids: [ids.modes_stopped.id] }); await sleep(800); await open(); s = await state();
+  check("when nothing is running the panel in 'active' mode has no disks (it hides itself instead of showing an empty frame)", s.disks.length === 0 && (await page.evaluate(() => { const b = document.getElementById("ps5-diskbar"); return !b || getComputedStyle(b).display === "none"; })), JSON.stringify(s));
+  await setMode("off"); s = await state();
+  check("'Не показывать': diskbar false in the page config and no panel at all", /diskbar":false/.test(s.cfg) && /diskbarMode":"off/.test(s.cfg) && !s.bar, JSON.stringify(s));
+  await setMode("all");
+  for (const t of (await rpc("torrent_get", { fields: ["id"] })).result.torrents) await rpc("torrent_remove", { ids: [t.id], delete_local_data: true });
+  check("no JS errors", errors.length === 0, errors.join(";"));
+  console.log(`\n${pass}/${pass + fail} disk panel mode checks passed`); await browser.close(); process.exit(fail ? 1 : 0);
+})().catch((e) => { console.log("crashed", e); process.exit(2); });

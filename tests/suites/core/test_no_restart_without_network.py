@@ -1,0 +1,31 @@
+import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "lib"))
+import sys
+from harness import *
+fresh(); loader = Loader(); m = start_manager()
+wait(lambda: daemon_pids() and rpc_ok(), 70); time.sleep(6)
+ida, ha = add_torrent("A_active.bin", False); idb, hb = add_torrent("B_active.bin", False); time.sleep(2)
+api("POST", "/api/config", {"daemon_restart_after_seconds": 10, "daemon_stop_grace_seconds": 5}); pid0 = daemon_pids()[0]
+print("== 11) no network (IP address gone) and the daemon is unresponsive: a restart would not help")
+open("/tmp/ps5tm_test_ip", "w").write("none\n"); time.sleep(3); os.kill(pid0, signal.SIGSTOP); time.sleep(40)
+check("nothing is restarted while there is no network", daemon_pids() == [pid0] and loader.count == 1, f"pids={daemon_pids()} launches={loader.count}")
+d = dstate(); check("but the page honestly says it is not responding (or still running): no restart storm", d["state"] in ("running", "not_responding") and not d["busy"], d)
+print(">>> the network is back")
+os.remove("/tmp/ps5tm_test_ip"); t0 = time.time()
+ok = wait(lambda: daemon_pids() and daemon_pids()[0] != pid0 and rpc_ok(), 80)
+check("after the network is back the unresponsive daemon is restarted", ok, f"{time.time()-t0:.0f} s")
+wait(lambda: dstate()["state"] == "running", 15); time.sleep(3)
+st = torrents(); check("A and B are active again after the restart (Transmission restores them)", st.get("A_active.bin", 0) != 0 and st.get("B_active.bin", 0) != 0, st)
+
+print("== 12) a NEW manager version brings a NEW daemon version")
+pid1 = daemon_pids()[0]; m.kill(); m.wait(); time.sleep(1)
+open("/data/Transmission/transmission/transmission_d.elf", "wb").write(b"old daemon version")       # the previous daemon on the disk
+mm = start_manager("mgr_new"); time.sleep(3)
+blob = open(f"{OUT}/transmission_d_host", "rb").read()
+check("the manager replaced the daemon file with the embedded version", open("/data/Transmission/transmission/transmission_d.elf", "rb").read() == blob)
+ok = wait(lambda: daemon_pids() and daemon_pids()[0] != pid1 and rpc_ok() and dstate()["state"] == "running", 90)
+check("the running (old) daemon was restarted gracefully into the new version", ok and "new daemon version" in shim(), f"{pid1} -> {daemon_pids()}")
+time.sleep(4); st = torrents()
+check("the torrents that were active are active again; nothing lost", st.get("A_active.bin", 0) != 0 and st.get("B_active.bin", 0) != 0, st)
+check("exactly three launches in total (first start, hang restart, version update): no loops", loader.count == 3, loader.count)
+kill_all(); loader.close()
+sys.exit(summary())

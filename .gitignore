@@ -1,0 +1,9 @@
+# build outputs and downloaded dependencies
+/.deps/
+/build/
+# tests
+/tests/web/node_modules/
+__pycache__/
+*.pyc
+*.log
+.DS_Store

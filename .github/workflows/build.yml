@@ -1,0 +1,64 @@
+# Builds the payload on every push and pull request, checks its imports (build.sh does) and the translation tables, and keeps the ELF as an artifact.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-18 lld-18 llvm-18-dev cmake make patch perl curl xz-utils unzip build-essential
+
+      - name: Cache the downloaded SDK and libraries
+        uses: actions/cache@v4
+        with:
+          path: |
+            .deps
+            !.deps/test
+          key: deps-${{ runner.os }}-${{ hashFiles('scripts/deps.sh', 'scripts/build-elf.sh') }}
+          restore-keys: |
+            deps-${{ runner.os }}-
+
+      - name: Build (the import check is part of it)
+        run: ./build.sh
+
+      - name: Check the translation tables
+        run: |
+          node tools/lang-tool.js check src/manager/page locales/en.strings locales/ru.strings
+          node tools/web-i18n-check.js locales/ru.strings locales/en.strings .deps/build/generated/web_public_html
+
+      - name: Keep the ELF
+        uses: actions/upload-artifact@v4
+        with:
+          name: Transmission-elf
+          path: build/Transmission-*.elf
+          if-no-files-found: error
+          retention-days: 14
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax of the scripts and tests
+        run: |
+          for f in build.sh scripts/*.sh tests/*.sh tests/build/*.sh; do bash -n "$f"; done
+          perl -c patches/web-client/web_patch.pl
+          python3 -m py_compile tests/lib/*.py tests/suites/*/*.py tests/run_pages.py tests/screenshots/*.py
+          for f in patches/web-client/js/*.js tools/*.js tests/web/*.js tests/screenshots/*.js; do node --check "$f"; done

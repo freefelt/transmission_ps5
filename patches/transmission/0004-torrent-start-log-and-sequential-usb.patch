@@ -1,0 +1,39 @@
+Subject: log where a torrent starts; sequential download on FAT disks
+
+tr_torrent::start:
+ 1) writes 'torrent start: <name> -> <folder>' to the daemon log
+ 2) enables sequential download for torrents on USB disks. exFAT/FAT32 have no sparse files:
+    writing a piece at a far offset makes the system fill the whole gap with zeroes (minutes
+    during which the Transmission thread and its UI stand still).
+
+---
+diff --git a/libtransmission/torrent.cc b/libtransmission/torrent.cc
+index cdb7569..5155863 100644
+--- a/libtransmission/torrent.cc
++++ b/libtransmission/torrent.cc
+@@ -607,6 +607,9 @@ void freeTorrent(tr_torrent* tor)
+ // or unset if we don't know and need to check for ourselves
+ // PS5 guard v2: check of the disk of a torrent (implemented in the daemon wrapper, src/daemon/guard.c). kind: 0 = start, 1 = verify. 0 = allowed.
+ extern "C" int ps5tm_guard_check_disk(char const* dir, int kind, char* msg, size_t msg_size);
++// PS5 guard v3: a log entry about the start and the flag "the torrent is on a USB disk" (implemented in the daemon wrapper, src/daemon/guard.c).
++extern "C" void ps5tm_guard_log_start(char const* name, char const* dir);
++extern "C" int ps5tm_guard_prefer_sequential(char const* dir);
+ 
+ void tr_torrent::start(bool bypass_queue, std::optional<bool> has_any_local_data)
+ {
+@@ -658,6 +661,15 @@ void tr_torrent::start(bool bypass_queue, std::optional<bool> has_any_local_data
+         }
+     }
+ 
++    // PS5 guard v3: log the folder of the torrent; on USB disks download in order (no writes at far offsets: on exFAT that means a long fill with zeroes).
++    {
++        ps5tm_guard_log_start(name().c_str(), current_dir().c_str());
++        if (ps5tm_guard_prefer_sequential(current_dir().c_str()) != 0)
++        {
++            set_sequential_download(true);
++        }
++    }
++
+     /* don't allow the torrent to be started if the files disappeared */
+     if (set_local_error_if_files_disappeared(this, has_any_local_data))
+     {

@@ -1,0 +1,44 @@
+Subject: rpc-server: log listener socket events at warn level
+
+Re-creation of the listening socket and port bind errors are logged at debug level in
+Transmission and are invisible in the normal log. After the console sleeps we need to know
+whether the socket is re-created and why it fails, so log these events at warn level.
+
+---
+diff --git a/libtransmission/rpc-server.cc b/libtransmission/rpc-server.cc
+index bc687de..3dc752e 100644
+--- a/libtransmission/rpc-server.cc
++++ b/libtransmission/rpc-server.cc
+@@ -4,6 +4,7 @@
+ // License text can be found in the licenses/ folder.
+ 
+ #include <algorithm>
++#include <cerrno>
+ #include <array>
+ #include <chrono>
+ #include <cstdint>
+@@ -776,6 +777,7 @@ void start_server(tr_rpc_server* server)
+ {
+     if (server->httpd)
+     {
++        tr_logAddWarn("RPC start_server: the listener object already exists, nothing started"); /* PS5 diagnostics */
+         return;
+     }
+ 
+@@ -801,7 +803,7 @@ void start_server(tr_rpc_server* server)
+         {
+             auto const retry_delay = rpc_server_start_retry(server);
+             auto const seconds = std::chrono::duration_cast<std::chrono::seconds>(retry_delay).count();
+-            tr_logAddDebug(fmt::format("Couldn't bind to {}, retrying in {} seconds", addr_port_str, seconds));
++            tr_logAddWarn(fmt::format("Couldn't bind to {} (errno {}), retrying in {} seconds", addr_port_str, errno, seconds)); /* PS5 diagnostics */
+             return;
+         }
+ 
+@@ -857,6 +859,7 @@ void stop_server(tr_rpc_server* server)
+ 
+ void restart_server(tr_rpc_server* const server)
+ {
++    tr_logAddWarn("RPC restart requested"); /* PS5 diagnostics */
+     if (server->is_enabled())
+     {
+         stop_server(server);

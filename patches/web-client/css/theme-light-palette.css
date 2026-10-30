@@ -1,0 +1,9 @@
+/* light palette: a soft gray background and white cards */
+:root{color-scheme:light;
+--color-bg-primary:#eef1f5;--color-bg-odd:#eef1f5;--color-bg-even:#eef1f5;--color-bg-popup:#fff;--color-bg-hover:#e4e9f0;--color-toolbar-background:#fff;
+--color-border-default:#d5dbe4;--color-progressbar-seed-1:#2fbf6b;--color-progressbar-seed-2:#cfeedd;--color-progressbar-background-2:#e4e9f0;
+--ps5-card:#fff;--ps5-field:#fff}
+:root .contrast-more{--color-bg-primary:#fff;--color-bg-odd:#fff;--color-toolbar-background:#fff;--ps5-card:#fff;--ps5-field:#fff}
+:root .contrast-less{--color-bg-primary:#eef1f5;--color-bg-odd:#eef1f5;--color-bg-popup:#fff}
+/* drop-down list arrow (color matched to the theme) */
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232a3140' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")}
