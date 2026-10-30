@@ -3,7 +3,7 @@
 All notable changes of the released versions. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the heading of
 every version is `## [<version>]`, and the text under it becomes the notes of the GitHub release (see `docs/releasing.md`).
 
-## [0.1] - Unreleased
+## [0.1] - 2026-10-30
 
 The first public release.
 
