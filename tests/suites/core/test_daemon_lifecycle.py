@@ -8,8 +8,9 @@ blob = os.path.getsize(f"{OUT}/transmission_d_host")
 check("daemon is running and answers RPC after the manager starts", ok, f"daemon pids {daemon_pids()}")
 check("the embedded daemon was written to /data/Transmission/transmission/transmission_d.elf (same size as the blob)", os.path.exists("/data/Transmission/transmission/transmission_d.elf") and os.path.getsize("/data/Transmission/transmission/transmission_d.elf") == blob, blob)
 check("exactly one launch through the loader; the daemon is a separate process from the manager", loader.count == 1 and daemon_pids() and set(daemon_pids()).isdisjoint(mgr_pids()), f"launches={loader.count}")
+wait(lambda: dstate()["state"] == "running" and daemon_pids() and dstate()["pid"] == daemon_pids()[0], 20)   # the manager looks at the daemon once a second: on a slow machine the state follows the process a moment later
 d = dstate(); check("settings page reports the daemon as running with its pid", d and d["state"] == "running" and d["pid"] == daemon_pids()[0], d)
-check("the manager tells about the start (notification)", "Transmission started." in mgrlog(), "")
+check("the manager tells about the start (notification)", wait(lambda: "Transmission started." in mgrlog(), 15), "")
 
 ida, ha = add_torrent("A_active.bin", False); idb, hb = add_torrent("B_active.bin", False); idc, hc = add_torrent("C_paused_by_user.bin", True); time.sleep(2)
 st = torrents(); check("test torrents: A and B active, C paused by the user", st["A_active.bin"] != 0 and st["B_active.bin"] != 0 and st["C_paused_by_user.bin"] == 0, st)

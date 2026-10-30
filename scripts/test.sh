@@ -37,7 +37,12 @@ run_suites() {   # relative suite paths...; returns 1 if any suite failed (a fai
         t1=$(date +%s)
         echo "$name: $(grep -E 'checks passed' "/tmp/ps5tm-test-$name.out") (exit $rc, FAIL lines: $(grep -c '^FAIL' "/tmp/ps5tm-test-$name.out"))" >> "$res"
         echo "$((t1 - t0)) $name" >> "$tim"
-        if [ "$rc" -ne 0 ] || ! grep -q 'checks passed' "/tmp/ps5tm-test-$name.out" || grep -q '^FAIL' "/tmp/ps5tm-test-$name.out"; then failed=1; fi
+        if [ "$rc" -ne 0 ] || ! grep -q 'checks passed' "/tmp/ps5tm-test-$name.out" || grep -q '^FAIL' "/tmp/ps5tm-test-$name.out"; then
+            failed=1
+            # what failed, right under the summary line (on a CI runner the .out file is not at hand), and the end of the output if the suite did not finish
+            grep '^FAIL' "/tmp/ps5tm-test-$name.out" | cut -c1-600 | sed 's/^/    /' >> "$res"
+            grep -q 'checks passed' "/tmp/ps5tm-test-$name.out" || tail -12 "/tmp/ps5tm-test-$name.out" | cut -c1-300 | sed 's/^/    | /' >> "$res"
+        fi
     done
     echo "--- seconds per suite, the slowest first (total $(awk '{s+=$1} END {print s}' "$tim") s):" >> "$res"
     sort -rn "$tim" | head -10 >> "$res"

@@ -18,13 +18,15 @@ const post = (path, body) => new Promise((res) => { const d = JSON.stringify(bod
   check("RU: the overflow menu (built by the client code) shows Russian items", /Статистика|Компактные строки|Сочетания клавиш/.test(txt), txt.replace(/\s+/g, " ").slice(0, 160));
   check("RU: no JavaScript errors while the client builds all its texts through ps5t", errors.length === 0, errors.join(";"));
   await post("/api/config", { web_openfolder: "bfpilot" }); await sleep(1500); await open();
-  await page.evaluate(async () => { const meta = btoa("d8:announce27:http://127.0.0.1:1/announce4:infod6:lengthi65536e4:name6:ru_one12:piece lengthi65536e6:pieces20:" + "\u0007".repeat(20) + "ee"); let sid = ""; for (let i = 0; i < 3; i++) { const r = await fetch("../rpc", { method: "POST", headers: { "X-Transmission-Session-Id": sid, "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", method: "torrent_add", params: { metainfo: meta, download_dir: "/data/torrents", paused: true }, id: 1 }) }); if (r.status === 409) { sid = r.headers.get("X-Transmission-Session-Id"); continue; } return r.status; } });
+  const rpcPage = (m, p) => page.evaluate(async (m, p) => { let sid = ""; for (let i = 0; i < 3; i++) { const r = await fetch("../rpc", { method: "POST", headers: { "X-Transmission-Session-Id": sid, "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", method: m, params: p, id: 1 }) }); if (r.status === 409) { sid = r.headers.get("X-Transmission-Session-Id"); continue; } return await r.json(); } }, m, p);
+  await rpcPage("torrent_add", { metainfo: Buffer.from("d8:announce27:http://127.0.0.1:1/announce4:infod6:lengthi65536e4:name6:ru_one12:piece lengthi65536e6:pieces20:" + "\u0007".repeat(20) + "ee", "latin1").toString("base64"), download_dir: "/data/torrents", paused: true });
   await open();
   const rc = await page.evaluate(() => { const li = document.querySelector("#torrent-list .torrent"); li.scrollIntoView(); const r = li.getBoundingClientRect(); return { x: r.left + 60, y: r.top + 20 }; });
   await page.mouse.click(rc.x, rc.y, { button: "right" }); await sleep(700);
   const mi = await page.evaluate(() => { const m = document.querySelector(".context-menu"); if (!m) return null; const it = [...m.querySelectorAll(".context-menuitem")]; const i = it.findIndex((e) => e.classList.contains("ps5-openfolder")); return { i, n: it.length, text: i >= 0 ? it[i].textContent.trim() : "", prev: i > 0 ? it[i - 1].textContent.trim() : "" }; });
   check("RU: 'Открыть папку' stands right after 'Указать расположение…' (as 'Open folder' after 'Set location…' in English), not at the end of the menu", !!mi && mi.i >= 0 && mi.text === "Открыть папку" && mi.prev === "Указать расположение…" && mi.i < mi.n - 1, JSON.stringify(mi));
   await page.evaluate(() => document.body.click()); await sleep(300); await post("/api/config", { web_openfolder: "off" });
+  for (const x of (await rpcPage("torrent_get", { fields: ["id", "name"] })).result.torrents.filter((x) => x.name === "ru_one")) await rpcPage("torrent_remove", { ids: [x.id], delete_local_data: true });   // the other tests of this stack expect it as it was
   await page.keyboard.press("Escape");
   await post("/api/config", { language: "en" }); await sleep(1500); await open();
   r = await look();
