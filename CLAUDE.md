@@ -352,7 +352,7 @@ The tests start the real daemon and manager on **Linux x86_64 with root** and em
   via Playwright into `/opt/pw-browsers`, or set `CHROME_BIN`). `tests/check-env.sh` checks it. Needs Node 20+ and Python 3.
 - The swarm tests (`tests/suites/network/`): Transmission rejects loopback peers, so the test tracker hands out the peer `192.0.2.2`, which must be on `lo`. Without it
   `test_piece_order` and the other network suites fail with "it downloads completely → []"; that is the environment, not a regression.
-- Build for the host: `./build.sh` first (the tests use the generated web files and icons), then `tests/build/build-test-binaries.sh` (the test tree: only `patches/transmission/` are applied; the build folder is cleaned when
+- Build for the host (needs the packages `libc++-18-dev libc++abi-18-dev libssl-dev libcurl4-openssl-dev zlib1g-dev` besides clang-18 and cmake; the CI installs them): `./build.sh` first (the tests use the generated web files and icons), then `tests/build/build-test-binaries.sh` (the test tree: only `patches/transmission/` are applied; the build folder is cleaned when
   the set of patches changes; output `transmission_d_host` and `Transmission_mgr_host`; stubs in `tests/build/stubs/`). Repeat it after any change in `src/`.
 - Run: `scripts/test.sh list|smoke|full|<area>|suite <file>|pages [segment...]`. Areas: `core`, `sleep`, `webconfig`, `folders`, `network`, `syssvc`, `language`. `smoke` = daemon_lifecycle, config_load,
   disk_panel_modes, download_folders_guard, folders_rpc, system_service_and_game_pause, page_language. Page segments: `settings`, `daemon-card`, `sleep`, `webui`, `effects`, `language`, `webui-language`.

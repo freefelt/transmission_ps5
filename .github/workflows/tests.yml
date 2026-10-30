@@ -36,10 +36,10 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install the build tools
+      - name: Install the build tools, and libc++, OpenSSL, curl and zlib for the host build of the tests
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang-18 lld-18 llvm-18-dev cmake make patch perl curl xz-utils unzip build-essential
+          sudo apt-get install -y --no-install-recommends clang-18 lld-18 llvm-18-dev cmake make patch perl curl xz-utils unzip build-essential libc++-18-dev libc++abi-18-dev libssl-dev libcurl4-openssl-dev zlib1g-dev pkg-config
 
       - name: Cache the downloaded SDK and libraries
         uses: actions/cache@v6
