@@ -15,7 +15,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # A branch push whose commit already carries a tag is covered by the Release workflow of that tag (the same tests, all of them, and the build), so it is skipped here.
+  # Tags are pushed together with the branch, so they are already visible; a pull request, a manual run and the call from Release (a tag ref) always run.
+  gate:
+    runs-on: ubuntu-24.04
+    outputs:
+      run: ${{ steps.g.outputs.run }}
+    steps:
+      - id: g
+        run: |
+          run=true
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF_TYPE" = branch ]; then
+            if git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY.git" | awk '{print $1}' | grep -qx "$GITHUB_SHA"; then run=false; fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "run=$run"
+
   build:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -53,6 +71,8 @@ jobs:
           retention-days: 14
 
   lint:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7

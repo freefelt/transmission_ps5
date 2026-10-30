@@ -29,7 +29,7 @@ The maintainer (Alexander) tests on a real console (firmware 11.20) and works in
    timers. Run the tests that match your change (`scripts/test.sh <area>` / `pages <segment>`), and the full set once before a release.
    Do not run them after every edit unless the maintainer asks.
 4. **Never claim something works on the console unless it was tried there.** Say exactly what was verified on the Linux host and what was not.
-5. **Raise the version** (`VERSION`, `0.0.N`, only the last number) after a change that goes to a console. The first public release will be `0.1`.
+5. **Raise the version** (`VERSION`, `0.0.N`, only the last number) after a change that goes to a console. The first public release, `0.1`, was published on 2026-10-30; releases are made by a tag (`docs/releasing.md`).
 6. **New functionality comes with tests.** A test must fail if the feature is broken; measure the real behaviour first, do not guess.
 7. **Reports are short.** Do not list individual tests: "all tests passed", or a short statement of what failed and why.
 8. **Never break the data of existing users** (settings, torrents, `/data/Transmission`): migrations are required.
@@ -406,7 +406,7 @@ Please send "Diagnostics → Mounts" (in full) with answers:
 **Refactoring for open source (the version in the repository is the state after it):** stage 1 everything out of the build script into files; 2 the folder layout; 3 English as the main language of the settings
 page; 4 splitting of the big files (web client, settings page, `ui` and `notify` C++ into modules, `main.c` into common/daemon/manager); 5 tests renamed and tools rewritten in Node; 6 documentation.
 Done in stage 6: `README.md`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, `patches/README.md`, this file, the safety notes translated, comments translated to English, the old history and migration notes removed from the tree.
-**CI (green since 2026-10-30: Build about 1.5 min with a warm cache, Tests about 21 min):** `.github/workflows/` `build.yml` (build + import check + translation check + lint on every push and pull request; no macOS job, by decision), `tests.yml` (smoke suites and page tests on every push/PR, all suites on request and before a release), `release.yml` (a tag equal to `VERSION` (no `v`: `0.1`): full tests, build, a GitHub release with `Transmission-<version>.elf`, its `.sha256` and the notes of `CHANGELOG.md`); how: `docs/releasing.md`. `scripts/test.sh` and `tests/run_pages.py` now return a failure status. Lessons of the first runs: a clang-tidy found on the runner broke the Transmission build (`-DRUN_CLANG_TIDY=OFF` now), the host test build needs libc++/OpenSSL/curl/zlib dev packages, and tests that look at the manager's once-a-second state must wait for it (a slow runner exposes such races).
+**CI (green since 2026-10-30: Build about 1.5 min with a warm cache, Tests about 21 min):** `.github/workflows/` `build.yml` (build + import check + translation check + lint on every push and pull request; no macOS job, by decision), `tests.yml` (smoke suites and page tests on every push/PR, all suites on request and before a release), a branch push whose commit already has a tag is skipped by Build and Tests (a `gate` job looks at `git ls-remote --tags`; the Release of that tag runs the same checks, **not yet seen working on GitHub**), `release.yml` (a tag equal to `VERSION` (no `v`: `0.1`): full tests, build, a GitHub release with `Transmission-<version>.elf`, its `.sha256` and the notes of `CHANGELOG.md`); how: `docs/releasing.md`. `scripts/test.sh` and `tests/run_pages.py` now return a failure status. Lessons of the first runs: a clang-tidy found on the runner broke the Transmission build (`-DRUN_CLANG_TIDY=OFF` now), the host test build needs libc++/OpenSSL/curl/zlib dev packages, and tests that look at the manager's once-a-second state must wait for it (a slow runner exposes such races).
 **Not done yet:** `docs/` pages in English (architecture, adding a patch or a language), a final full test run, and the clean git history (the maintainer will force-push when 0.1 is ready; the old transcripts must stay out of it).
 The icons are shipped as ready CSS (`patches/web-client/icons/README.md` says where they come from); regenerating them is not supported by the repository. The home-screen tile editor was a separate project (not here).
 
@@ -421,7 +421,8 @@ The icons are shipped as ready CSS (`patches/web-client/icons/README.md` says wh
 - The status line of the page ("running; game: None; ... keep awake: Off") is built from pieces with capitalized words in the middle of a phrase; it could be rewritten as whole texts.
 - Known unsolved: after sleep the ELF loader sometimes does not run big ELFs (workaround: send `Transmission.elf` again through Payload Manager). The panic when entering rest mode with Transmission running did not reproduce on the latest version.
 
-**Not verified on a console (as of 0.0.77):** `kern.proc.filedesc`; power off; full exit; the icon of "a single file inside a folder"; disabling auto-sleep on wake; the network-change restart; behavior of the USB
+**Verified by the maintainer on 11.20 before 0.1:** power off at the end of downloads, full exit, the network-change restart.
+**Not verified on a console (as of 0.1):** the "Disk busy" window with the list of holders (`kern.proc.filedesc`); the icon of "a single file inside a folder"; disabling auto-sleep on wake; behavior of the USB
 fixes on a real exFAT disk beyond the maintainer's reports; other firmware versions than 11.20 (10.01: a user reported that it starts and a download was started, no further report).
 
 ## 12. Decisions of the maintainer worth remembering
@@ -430,5 +431,5 @@ fixes on a real exFAT disk beyond the maintainer's reports; other firmware versi
 - Read-only disks are not our concern (Transmission shows its own error). The main goal is to minimize the risk to the console; the rest is the maintainer's call.
 - A page for the whole network without a password is deliberate (`rpc-whitelist` limits it to private networks).
 - Python host tests stay (they drive the real daemon); the build and developer tools are shell and Node.
-- The version scheme is `0.0.N` until the first public release `0.1`.
+- The version scheme was `0.0.N` until the first public release `0.1` (2026-10-30); `VERSION` now holds the released version, raise it for the next one (for example `0.1.1` or `0.2`) together with a `CHANGELOG.md` section.
 - The license is GPL-3.0-or-later for the whole project.

@@ -11,7 +11,7 @@ A release is made by GitHub Actions from a tag. The file that users download is 
    git tag 0.1
    git push origin 0.1
    ```
-5. The workflow **Release** then: checks that the tag equals the content of `VERSION` and that the changelog has the notes; runs **all** the test suites and
+5. Push the tag together with the branch (`git push --atomic origin main 0.1`) or alone: Build and Tests skip a branch push whose commit already has a tag, so nothing runs twice. The workflow **Release** then: checks that the tag equals the content of `VERSION` and that the changelog has the notes; runs **all** the test suites and
    the page tests (about 45 minutes); builds the payload (the import check is part of the build); and publishes the release with
    `Transmission-<version>.elf`, `Transmission-<version>.elf.sha256` and the notes.
 
@@ -20,4 +20,4 @@ The "Releases → latest" link of the README always points to the newest release
 **If the release fails** (a test failed, a typo in the tag): fix the problem on `main`, delete the tag (`git push origin :refs/tags/0.1` and `git tag -d 0.1`), delete the
 half-made release on the Releases page if it exists, and tag again. Run the **Tests** workflow by hand ("Run workflow", "full") at any time to check the whole set without a release.
 
-The `VERSION` of the development builds stays `0.0.N` until the first public release; after 0.1 raise it as usual and write a `CHANGELOG.md` section for each release.
+Since 0.1 the `VERSION` file holds the last released version: raise it for the next release (for example `0.1.1`) and write a `CHANGELOG.md` section for it.

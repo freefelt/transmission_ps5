@@ -20,7 +20,7 @@
 </div>
 
 > [!IMPORTANT]
-> This is **work in progress**: the first public release will be `0.1`. It is developed and tested on firmware **11.20**. On **10.01** a user reported that it starts and downloads
+> This is the first public release (`0.1`), so expect rough edges. It is developed and tested on firmware **11.20**. On **10.01** a user reported that it starts and downloads
 > a torrent (not fully tested); other firmware versions are not verified yet. Your console must **already** be able to run payloads (an ELF loader that listens on port 9021). This
 > project does not jailbreak anything and does not help with it.
 
