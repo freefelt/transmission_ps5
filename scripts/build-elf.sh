@@ -160,6 +160,7 @@ if [ ! -f "$TR_BUILD/CMakeCache.txt" ]; then
         -DCURL_INCLUDE_DIR="$P/include" -DCURL_LIBRARY="$P/lib/libcurl.a" \
         -DCMAKE_CXX_STANDARD_LIBRARIES="-L$P/lib -lz" \
         -DENABLE_DAEMON=ON -DENABLE_GTK=OFF -DENABLE_QT=OFF -DENABLE_MAC=OFF \
+        -DRUN_CLANG_TIDY=OFF `# otherwise a clang-tidy found on the machine is run on the cross-compiled sources and fails` \
         -DENABLE_UTILS=OFF -DENABLE_CLI=OFF -DENABLE_TESTS=OFF -DENABLE_NLS=OFF \
         -DINSTALL_DOC=OFF -DINSTALL_WEB=ON -DREBUILD_WEB=OFF \
         -DWITH_INOTIFY=OFF -DWITH_KQUEUE=OFF -DWITH_SYSTEMD=OFF -DENABLE_UTP=ON \

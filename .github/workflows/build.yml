@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install the build tools
         run: |
@@ -27,7 +27,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends clang-18 lld-18 llvm-18-dev cmake make patch perl curl xz-utils unzip build-essential
 
       - name: Cache the downloaded SDK and libraries
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             .deps
@@ -45,7 +45,7 @@ jobs:
           node tools/web-i18n-check.js locales/ru.strings locales/en.strings .deps/build/generated/web_public_html
 
       - name: Keep the ELF
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Transmission-elf
           path: build/Transmission-*.elf
@@ -55,7 +55,7 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Syntax of the scripts and tests
         run: |
           for f in build.sh scripts/*.sh tests/*.sh tests/build/*.sh; do bash -n "$f"; done
