@@ -58,6 +58,58 @@ static std::string sleep_stop_daemon()
     return error;
 }
 
+// The console goes to sleep or shuts down without us (the PS button, the system menu, a timer of the console): the power state of the system says so (powerstate.cc). The
+// payload keeps running in rest mode, so the daemon is stopped cleanly now, exactly as before the sleep that we request ourselves, and is not started until the state is
+// "working" again. If our own sleep is already in progress it has stopped the daemon.
+static std::atomic<bool> g_power_stopping{ false };
+
+void sleep_power_enter(char const* reason)
+{
+    long const now = static_cast<long>(std::time(nullptr));
+    bool const had_hold = g_sl.hold.exchange(true);
+    if (!had_hold)
+    {
+        g_sl.hold_net_lost = false;
+        g_sl.hold_since = now;
+    }
+    g_sl.hold_power = true;
+    shim_log("sleep: the console goes to sleep or shuts down (%s)%s", reason, had_hold ? ": the daemon is being stopped by our own sleep" : "");
+    if (!had_hold && g_sl.phase.load() == SleepIdle && !g_power_stopping.exchange(true))
+    {
+        std::thread(
+            []
+            {
+                std::string const error = sleep_stop_daemon();
+                if (!error.empty())
+                {
+                    shim_log("sleep: Transmission was not stopped cleanly: %s", error.c_str());
+                }
+                g_power_stopping = false;
+            })
+            .detach();
+    }
+}
+
+void sleep_power_leave()
+{
+    long const now = static_cast<long>(std::time(nullptr));
+    if (g_sl.hold_power.exchange(false))
+    {
+        g_sl.hold = false;
+        g_d.launch_failures = 0; // a new wake-up: automatic attempts are allowed again
+        g_d.launch_not_before = now + g_cfg.wake_delay_seconds.load();
+        shim_log("sleep: the console is awake: Transmission will start again in %d s", g_cfg.wake_delay_seconds.load());
+        journal_event(ps5tm_tr("me_j_wake_detected", { std::to_string(g_cfg.wake_delay_seconds.load()) }));
+    }
+    if (g_sl.armed.load() && g_sl.phase.load() == SleepIdle)
+    {
+        g_sl.armed = false; // the same rule as for any other wake-up: the elapsed time is not the same any more
+        shim_log("sleep: the console woke up: auto-sleep switched off");
+        journal_event(ps5tm_tr("me_j_woke"));
+    }
+    syssvc_resumed(now);
+}
+
 static void sleep_worker()
 {
     int const reason = g_sl.reason.load();
@@ -225,8 +277,10 @@ void sleep_tick(long now, bool have_ip, bool resumed)
 
     // After the sleep call do not start the daemon until the console wakes up: wake-up is visible by SIGCONT/a time jump
     // or by the network coming back (in rest mode the network disappears). If the network never went away, sleep did not happen.
+    // (a hold that comes from the power state ends when the state is "working" again; only if the monitor of the power state is silent for 2 minutes the network decides)
     int const phase = g_sl.phase.load();
-    if (g_sl.hold.load() && (phase == SleepEntering || phase == SleepIdle))
+    bool const power_decides = g_sl.hold_power.load() && power_poll_age() >= 0 && power_poll_age() < 120;
+    if (g_sl.hold.load() && !power_decides && (phase == SleepEntering || phase == SleepIdle))
     {
         if (!have_ip)
         {

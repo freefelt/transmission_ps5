@@ -159,6 +159,11 @@ function dmDo(run){var m=$('dmMsg');m.className='msg';m.textContent='…';api('/
 $('dmBtn').onclick=function(){var run=(state&&(state.daemon.state==='running'||state.daemon.state==='not_responding'));
  if(run){cfmAsk('Stop Transmission?','It will receive the termination signal: active torrents will be paused and resumed at the next start, and the ones you paused yourself will stay paused.','Stop',function(){dmDo(true)});return}
  dmDo(false)};
+var PW_NAMES={working:'Working',starting:'Starting',saving:'Power saving',suspend:'Going to rest mode',standby:'Rest mode',shutdown:'Shutting down'};
+function pwRender(st){var p=st&&st.power,e=$('pwState');if(!p){e.textContent='—';return}
+ if(p.disabled){e.textContent='off: '+p.error;return}
+ if(!p.ready){e.textContent='loading or not available';return}
+ e.textContent=(PW_NAMES[p.name]||'Unknown')+' ('+p.state+')'}
 function ssRender(st){var ss=st&&st.syssvc,e=$('ssState');if(!ss){e.textContent='—';return}
 if(ss.hung){e.textContent='hung: '+ss.error;return}if(ss.disabled){e.textContent='off: '+ss.error;return}
 if(!ss.ready){e.textContent='loading or not available'+(ss.error?': '+ss.error:'');return}
@@ -179,7 +184,7 @@ function topRender(s){var upd=updTag&&verNewer(updTag,s.version)?updTag:'',key=s
  if(upd){t.appendChild(document.createTextNode(' ('));var a=document.createElement('a');a.href=UPD_PAGE;a.target='_blank';a.rel='noopener';a.textContent='update available'+' '+upd;t.appendChild(a);t.appendChild(document.createTextNode(')'))}
  t.appendChild(document.createTextNode(' · Transmission '+s.tr_version+' · console address '+s.ip))}
 updCheck(); // after the definitions above: it reads UPD_URL
-function render(s){state=s;ssRender(s.stats);$('fdCard').classList.toggle('fd-mono',s.config.web_icons==='mono');$('fdCard').classList.toggle('fd-open-on',s.config.web_openfolder==='bfpilot'||s.config.web_openfolder==='webfm');if(!formBuilt)buildForm(s.config);dmRender(s.daemon);notifState(s.notif_latest); var tr='http://'+location.hostname+':'+s.rpc_port+'/';
+function render(s){state=s;ssRender(s.stats);pwRender(s.stats);$('fdCard').classList.toggle('fd-mono',s.config.web_icons==='mono');$('fdCard').classList.toggle('fd-open-on',s.config.web_openfolder==='bfpilot'||s.config.web_openfolder==='webfm');if(!formBuilt)buildForm(s.config);dmRender(s.daemon);notifState(s.notif_latest); var tr='http://'+location.hostname+':'+s.rpc_port+'/';
  topRender(s);$('bdState').textContent='SDK '+s.sdk+' · built '+s.built;
  $('trLink').href=tr;if(/PlayStation/i.test(navigator.userAgent||''))$('trLink').removeAttribute('target');else $('trLink').target='ps5tm-transmission-web'; /* a named tab: the next click goes to the same tab instead of opening a new one (no noopener: it would always open a new one) */
  var st=s.stats,t='',run=s.daemon.state==='running';

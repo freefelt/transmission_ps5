@@ -141,6 +141,10 @@ extern "C" void* ps5tm_monitor_thread(void*)
     {
         std::thread{ syssvc_main }.detach(); // console system service (game, language, "keep awake", sleep)
     }
+    if (std::getenv("PS5TM_NO_POWER") == nullptr)
+    {
+        std::thread{ power_main }.detach(); // the power state of the console: the daemon is stopped before sleep and started after it
+    }
  // system service helper (detects the game): once per manager start
 
     while (ps5tm_daemon_finished == 0)

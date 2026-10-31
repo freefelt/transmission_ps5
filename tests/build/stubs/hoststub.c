@@ -35,7 +35,29 @@ static int modules_has(const char *word) {
     FILE *f = fopen("/tmp/ps5tm_test_modules", "r"); char b[256] = {0};
     if (!f) return 0; if (!fgets(b, sizeof b, f)) b[0] = 0; fclose(f); return strstr(b, word) != NULL;
 }
-static int st_open_flag(void *ev, const char *name) { char b[128]; snprintf(b, sizeof b, "OpenEventFlag(%s)", name); calllog(b); *(void **)ev = (void *)0x1234; return 0; }
+static int st_open_flag(void *ev, const char *name) {
+    char b[128]; snprintf(b, sizeof b, "OpenEventFlag(%s)", name); calllog(b);
+    void *h = (void *)0x1234;
+    if (!strcmp(name, "SceSystemStateMgrInfo")) h = (void *)0x1001; else if (!strcmp(name, "SceSystemStateMgrStatus")) h = (void *)0x1002;
+    *(void **)ev = h; return 0;
+}
+/* TEST imitation of the power state of the console: /tmp/ps5tm_power_state holds the number of SceSystemStateMgrInfo (default 1000 = working; 300 suspend on going,
+ * 500 main on standby, 100 shutdown on going), /tmp/ps5tm_power_status the hexadecimal pattern of SceSystemStateMgrStatus (0x200000: the shell UI is shutting down) */
+static int st_poll_flag(void *ev, uint64_t bits, unsigned mode, uint64_t *out) {
+    (void)bits; (void)mode;
+    if (ev == (void *)0x1001) {
+        unsigned long long v = 1000; FILE *f = fopen("/tmp/ps5tm_power_state", "r");
+        if (f) { if (fscanf(f, "%llu", &v) != 1) v = 1000; fclose(f); }
+        *out = v; return 0;
+    }
+    if (ev == (void *)0x1002) {
+        unsigned long long v = 0; FILE *f = fopen("/tmp/ps5tm_power_status", "r");
+        if (f) { if (fscanf(f, "%llx", &v) != 1) v = 0; fclose(f); }
+        if (!v) return (int)0x80020010; /* no bit set: the poll reports an error, like the real one */
+        *out = v; return 0;
+    }
+    return (int)0x80020016;
+}
 static int st_notify(void) { calllog("NotifySystemSuspendStart"); return 0; }
 static int st_set_flag(void *ev, int bits) { (void)ev; char b[64]; snprintf(b, sizeof b, "SetEventFlag(0x%x)", bits); calllog(b); return 0; }
 static int st_close_flag(void *ev) { (void)ev; calllog("CloseEventFlag"); return 0; }
@@ -75,6 +97,7 @@ intptr_t kernel_dynlib_resolve(int pid, uint32_t h, const char *nid) {
         if (!strcmp(nid, "da6-yq0GbLg")) return (intptr_t)st_notify;
         if (!strcmp(nid, "IOnSvHzqu6A")) return (intptr_t)st_set_flag;
         if (!strcmp(nid, "s9-RaxukuzQ")) return (intptr_t)st_close_flag;
+        if (!strcmp(nid, "9lvj5DjHZiA")) return (intptr_t)st_poll_flag;
     }
     if (h == 5) {
         if (!strcmp(nid, "540lotO7oHE")) return (intptr_t)st_ai_init;

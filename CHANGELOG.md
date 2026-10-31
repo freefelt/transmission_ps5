@@ -3,12 +3,17 @@
 All notable changes of the released versions. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the heading of
 every version is `## [<version>]`, and the text under it becomes the notes of the GitHub release (see `docs/releasing.md`).
 
+## [0.3] - Unreleased
+
+### Changes
+- Transmission no longer runs while the console is in rest mode. The payload is not frozen by the console in rest mode (it kept running, and the daemon used a whole CPU core for the ten minutes), so the manager now watches the power state of the console (the system's event flag, the same way as ShadowMountPlus): when the console goes to sleep or shuts down, Transmission is stopped cleanly (the torrents are paused and remembered), and it starts again, and resumes them, when the console is awake. The Diagnostics card shows the power state.
+
 ## [0.2] - 2026-10-31
 
 ### Changes
 - Built with PS5 Payload SDK v0.45, the first line of SDKs that know firmware 13.60 (v0.41 does not know it, so 0.1 most probably did not start there); the diagnostics show the SDK version and the build time.
 - Transmission 4.1.4 (fixes zero-byte files in torrents, a rare hang on shutdown and hardens `torrent-add`).
-- The "system does not answer" message (game detection, keep awake) no longer stays forever after a console sleep: the 30 s count restarts at wake-up and the service comes back by itself, with a bell entry.
+- The "system does not answer" message (game detection, keep awake) no longer stays forever after a console sleep: the 30 s count restarts at wake-up and the service comes back by itself; within 3 minutes after a wake-up the console's services are slow and that goes to the log only, not to the bell.
 - Safer and clearer settings page: short captions, details in a "?" popup; download folders have square icon buttons (eject, open folder, remove), "drive not connected" is less alarming.
 - Shorter names in the settings (“Pause during a game”: Do not pause / When the game is on screen / When the game is running; “Open folder” item: Do not show / BFpilot / PS5 Web File Manager); the rest mode method moved to the Advanced settings; the dialogs of the Transmission page show our icon instead of the stock logo.
 - Starting and stopping the daemon no longer waits for a DNS server that does not answer (a network that lets only some DNS servers through used to cost 30 seconds each): name lookups of the daemon are given up after 4 seconds, two failures in a row stop further lookups for 30 seconds, and the DHT looks up its bootstrap name in the background.

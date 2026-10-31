@@ -34,7 +34,7 @@ check("while it downloads nothing happens", suspends() == before and sstate()["a
 finish_real_torrent(rid, "R_real.bin", DATA)
 ok = wait(lambda: suspends() > before, 70)
 check("after the download completed the console went to sleep", ok and "auto-sleep triggered (all downloads finished)" in shim(), "")
-check("the job switched itself off; Transmission was stopped like by the button", sstate()["autosleep"]["armed"] is False and not daemon_pids() and "Transmission stopped before sleep." in mgrlog())
+check("the job switched itself off; Transmission was stopped like by the button", sstate()["autosleep"]["armed"] is False and not daemon_pids() and "Transmission stopped before sleep or shutdown." in mgrlog())
 wake(); wait(lambda: daemon_pids() and rpc_ok() and dstate()["state"] == "running", 60)
 kill_all(); loader.close()
 sys.exit(summary())

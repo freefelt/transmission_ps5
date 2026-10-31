@@ -139,6 +139,8 @@ struct SysState
     bool ready = false; // libraries are loaded, the needed functions are found
     bool hung = false; // a call did not return within SysHangSeconds: the service is not used until the call returns
     std::time_t hung_at = 0;
+    bool hung_quiet = false; // not told to the bell yet (it is told only if the silence lasts)
+    std::string hung_call;
     bool disabled = false; // a previous start crashed or hung inside a function
     std::string error;
     int app_id = -1;
@@ -400,6 +402,26 @@ void syssvc_main()
     }
 }
 
+// The bell hears about a silent system service only when it has lasted this long (counted from the moment the service was switched off, after the 30 s of the
+// watchdog): the console's services are slow to come back right after a wake-up (a call stayed blocked for 35 s), and a short silence is not worth a message. It
+// goes to the log at once.
+static int announce_delay_seconds()
+{
+#ifdef __linux__
+    if (FILE* f = std::fopen("/tmp/ps5tm_sys_announce_delay", "r")) // host tests
+    {
+        int v = 0;
+        int const ok = std::fscanf(f, "%d", &v);
+        std::fclose(f);
+        if (ok == 1 && v > 0)
+        {
+            return v;
+        }
+    }
+#endif
+    return 90;
+}
+
 // The console woke up (the monitor saw a gap or SIGCONT): the clock jumped, and a call that was running when the console went to sleep has not had a
 // chance to return yet. The 30 seconds are counted from the wake-up.
 void syssvc_resumed(std::time_t now)
@@ -424,7 +446,17 @@ void syssvc_watchdog(std::time_t now)
             g_ss.hung = false;
             g_ss.error.clear();
             shim_log("syssvc: the system answers again: the system service features are on");
-            journal_event(ps5tm_tr("mr_ss_back"));
+            if (!g_ss.hung_quiet)
+            {
+                journal_event(ps5tm_tr("mr_ss_back"));
+            }
+            g_ss.hung_quiet = false;
+        }
+        else if (g_ss.hung_quiet && now - g_ss.hung_at >= announce_delay_seconds())
+        {
+            g_ss.hung_quiet = false; // still silent after the delay: now it is worth telling
+            shim_log("syssvc: still no answer %d s after it was switched off", static_cast<int>(now - g_ss.hung_at));
+            journal_event(ps5tm_tr("mr_ss_hung", { g_ss.hung_call }));
         }
         return;
     }
@@ -434,9 +466,10 @@ void syssvc_watchdog(std::time_t now)
     }
     g_ss.hung = true;
     g_ss.hung_at = now;
+    g_ss.hung_call = name;
+    g_ss.hung_quiet = true;
     g_ss.error = std::string{ "the call " } + name + " did not return";
-    shim_log("syssvc: HUNG in %s for %d s: the system service features are off until the call returns", name, static_cast<int>(now - since));
-    journal_event(ps5tm_tr("mr_ss_hung", { std::string{ name } }));
+    shim_log("syssvc: HUNG in %s for %d s: the system service features are off until the call returns (the bell is told if it lasts %d s more)", name, static_cast<int>(now - since), announce_delay_seconds());
 }
 
 GameState syssvc_game_state()

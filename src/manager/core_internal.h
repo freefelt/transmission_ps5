@@ -601,6 +601,7 @@ struct SleepShared
     std::atomic<bool> hold{ false };
     std::atomic<long> hold_since{ 0 };
     std::atomic<bool> hold_net_lost{ false };
+    std::atomic<bool> hold_power{ false }; // the hold comes from the power state of the system (released by "working"), not from the network
     // "after all downloads finish": not persisted, lives only while the manager runs
     std::atomic<bool> armed{ false };
     std::atomic<int> timeout_minutes{ 240 };
@@ -659,6 +660,10 @@ inline constexpr int SysHangSeconds = 30;
 
 extern std::atomic<bool> g_ss_want_ka;
 void syssvc_main();
+void power_main(); // the power state of the console: a thread (powerstate.cc)
+long power_poll_age();
+void sleep_power_enter(char const* reason); // the console goes to sleep or shuts down (sleep.cc)
+void sleep_power_leave(); // the console is awake again
 void syssvc_watchdog(std::time_t now);
 void syssvc_resumed(std::time_t now);
 GameState syssvc_game_state();

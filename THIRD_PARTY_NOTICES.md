@@ -60,5 +60,5 @@ Projects whose examples and sources helped the development (credited as on the s
 [BFpilot](https://github.com/ItsBlurf/BFpilot) (icon registration through SceIpmi and SceAppInstUtil), Payload Manager (process names,
 icon installation, process memory), ShadowMountPlus, websrv and ftpsrv (installing a shortcut app),
 [ps5-linux-loader](https://github.com/ps5-linux/ps5-linux-loader) (the way to enter rest mode),
-[ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus) (the way to ask the system to eject a USB drive over IPMI), PS5-Power-Payloads-Project (power off and rest mode calls), [ps5-library](https://github.com/deox1111/ps5-library) (ideas about
+[ShadowMountPlus](https://github.com/drakmor/ShadowMountPlus) (the way to ask the system to eject a USB drive over IPMI, and the way to read the power state of the console from the event flags `SceSystemStateMgrInfo` and `SceSystemStateMgrStatus`), PS5-Power-Payloads-Project (power off and rest mode calls), [ps5-library](https://github.com/deox1111/ps5-library) (ideas about
 working in rest mode and device pairing) and PS5-Suite (a note about the official power off calls).

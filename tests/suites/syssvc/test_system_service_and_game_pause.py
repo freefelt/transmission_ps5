@@ -13,9 +13,10 @@ def game(on=False, minimised=False):
     for f, want in (("/tmp/ps5tm_sys_app", on), ("/tmp/ps5tm_sys_suspended", minimised)):
         if want: open(f, "w").write("PPSA99000\n")
         elif os.path.exists(f): os.remove(f)
-for f in ("/tmp/ps5tm_sys_app", "/tmp/ps5tm_sys_suspended", "/tmp/ps5tm_sys_mode", "/tmp/ps5tm_sys_crash", "/tmp/ps5tm_sys_calls.log", "/tmp/ps5tm_sys_notify.log", GP):
+for f in ("/tmp/ps5tm_sys_app", "/tmp/ps5tm_sys_suspended", "/tmp/ps5tm_sys_mode", "/tmp/ps5tm_sys_announce_delay", "/tmp/ps5tm_sys_crash", "/tmp/ps5tm_sys_calls.log", "/tmp/ps5tm_sys_notify.log", GP):
     if os.path.exists(f): os.remove(f)
 fresh(); loader = Loader(); m = start_manager()
+open("/tmp/ps5tm_sys_announce_delay", "w").write("3\n")      # a short delay for the first checks; the quiet scenarios at the end set a longer one
 try:
     wait(lambda: daemon_pids() and rpc_ok() and dstate()["state"] == "running", 70)
     ok = wait(lambda: sysvc().get("ready") is True, 40)
@@ -58,19 +59,30 @@ try:
     open("/tmp/ps5tm_sys_mode", "w").write("hang\n")
     t0 = time.time(); ok = wait(lambda: st()["g_a"] != 0 and st()["g_b"] != 0, 130)
     check("after about a minute without an answer about the game state the paused downloads are resumed (fail-safe) and the bell says why (without naming any service)", ok and 50 <= time.time() - t0 <= 125 and any("Не удаётся определить, запущена ли игра" in x and "возобновлены: 2" in x for x in bell()), (f"{time.time()-t0:.0f} s", [x[:80] for x in bell()][-2:]))
-    check("a call that does not return for 30 s switches the service off (hung) and the bell says so", wait(lambda: sysvc().get("hung") is True, 40) and any("Система не отвечает" in x for x in bell()), (sysvc(), [x[:60] for x in bell()][-2:]))
+    check("a call that does not return for 30 s switches the service off (hung) and the bell says so (after the delay)", wait(lambda: sysvc().get("hung") is True, 40) and wait(lambda: any("Система не отвечает" in x for x in bell()), 20), (sysvc(), [x[:60] for x in bell()][-2:]))
     print("== the call returns again: the service is switched on again (it is not off until the payload is restarted)")
     os.remove("/tmp/ps5tm_sys_mode")
     check("when the call returns the service works again (hung is false) and the bell says so", wait(lambda: sysvc().get("hung") is False, 15) and any("Система снова отвечает" in x for x in bell()), (sysvc(), [x[:60] for x in bell()][-2:]))
     print("== a sleep in the middle of a call: the clock jumps, but the call is not declared hung")
-    n_hung = sum("Система не отвечает" in x for x in bell())
+    n_hung = sum("Система не отвечает" in x for x in bell()); n_back = sum("Система снова отвечает" in x for x in bell())
+    open("/tmp/ps5tm_sys_announce_delay", "w").write("40\n")      # the bell hears about a silent service after 40 s here (90 s in reality)
     open("/tmp/ps5tm_sys_mode", "w").write("hang\n"); time.sleep(20)
     for p in mgr_pids(): os.kill(p, signal.SIGCONT)      # the console woke up: the 30 s start again from now
     time.sleep(20); mid = sysvc().get("hung")
     check("20 s before and 20 s after the wake-up: not declared hung (without the restart of the count it would be after 30 s in total)", mid is False, mid)
     check("but a call that really stays stuck after the wake-up is declared hung 30 s later", wait(lambda: sysvc().get("hung") is True, 25), sysvc())
+    print("== a short silence (the console's services are slow right after a wake-up) is not told to the bell")
+    check("the hang that has just begun is in the log, not in the bell yet", sum("Система не отвечает" in x for x in bell()) == n_hung and "the bell is told if it lasts" in shim(), n_hung)
+    os.remove("/tmp/ps5tm_sys_mode")
+    check("it ended after a few seconds: the system answering again is not announced either; the service works again", wait(lambda: sysvc().get("hung") is False, 15) and sum("Система снова отвечает" in x for x in bell()) == n_back and sum("Система не отвечает" in x for x in bell()) == n_hung, sysvc())
+    print("== ... but a silence that goes on is told to the bell")
+    open("/tmp/ps5tm_sys_mode", "w").write("hang\n")
+    check("hung again, still quiet", wait(lambda: sysvc().get("hung") is True, 40) and sum("Система не отвечает" in x for x in bell()) == n_hung, sysvc())
+    check("after the delay and still silent, the bell is told (once)", wait(lambda: sum("Система не отвечает" in x for x in bell()) == n_hung + 1, 60), sum("Система не отвечает" in x for x in bell()) - n_hung)
+    os.remove("/tmp/ps5tm_sys_mode")
+    check("and when it answers after being told, the bell hears that too", wait(lambda: sum("Система снова отвечает" in x for x in bell()) == n_back + 1, 15), sum("Система снова отвечает" in x for x in bell()) - n_back)
 finally:
-    for f in ("/tmp/ps5tm_sys_app", "/tmp/ps5tm_sys_suspended", "/tmp/ps5tm_sys_mode"):
+    for f in ("/tmp/ps5tm_sys_app", "/tmp/ps5tm_sys_suspended", "/tmp/ps5tm_sys_mode", "/tmp/ps5tm_sys_announce_delay"):
         if os.path.exists(f): os.remove(f)
     kill_all()
     try: loader.close()

@@ -13,7 +13,7 @@ check("accepted; there is NO countdown for the manual test button", c == 200 and
 check("the rest-mode call was made after the daemon was stopped", suspends() == before + 1 and not daemon_pids(), f"suspends={suspends()}, daemon={daemon_pids()}")
 lines = open("/data/Transmission/paused_by_stop.txt").read().split() if os.path.exists("/data/Transmission/paused_by_stop.txt") else []
 check("the stop was the 'button' kind: active torrent remembered for resume (R), user-paused kept (P)", f"R{ha}" in lines and f"P{hc}" in lines, lines)
-check("Transmission was closed gracefully before sleep", "Closing transmission session" in open("/data/Transmission/logs/console.log").read() and "Transmission stopped before sleep." in mgrlog())
+check("Transmission was closed gracefully before sleep", "Closing transmission session" in open("/data/Transmission/logs/console.log").read() and "Transmission stopped before sleep or shutdown." in mgrlog())
 sl = sstate(); check("the manager waits for the wake-up: holding, desired state is still 'running'", sl["sleep"]["holding"] is True and sl["daemon"]["desired_running"] is True, sl["sleep"])
 time.sleep(25); check("the daemon is NOT started again while the console is 'asleep'", not daemon_pids() and loader.count == 1, f"launches={loader.count}")
 print(">>> the console wakes up (SIGCONT)")

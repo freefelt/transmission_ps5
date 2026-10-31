@@ -29,7 +29,7 @@ std::string state_json()
     j += "}";
     j += ",\"stats\":{\"total\":" + std::to_string(g_stats.total.load()) + ",\"downloading\":" +
         std::to_string(g_stats.downloading.load()) + ",\"seeding\":" + std::to_string(g_stats.seeding.load()) +
-        ",\"paused\":" + std::to_string(g_stats.paused.load()) + ",\"game_pause_active\":" + jbool(ps5tm_game_pause_active()) + ",\"syssvc\":" + ps5tm_syssvc_json() + ",\"last_poll_age\":" +
+        ",\"paused\":" + std::to_string(g_stats.paused.load()) + ",\"game_pause_active\":" + jbool(ps5tm_game_pause_active()) + ",\"syssvc\":" + ps5tm_syssvc_json() + ",\"power\":" + ps5tm_power_json() + ",\"last_poll_age\":" +
         (last_poll == 0 ? std::string{ "-1" } : std::to_string(now - last_poll)) + ",\"rpc_ok\":" + jbool(g_stats.rpc_ok) +
         ",\"monitor_active\":" + jbool(g_stats.monitor_active) + ",\"down_bps\":" + std::to_string(g_stats.down_bps.load()) + ",\"up_bps\":" + std::to_string(g_stats.up_bps.load()) + "}";
     {
