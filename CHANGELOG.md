@@ -3,10 +3,10 @@
 All notable changes of the released versions. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the heading of
 every version is `## [<version>]`, and the text under it becomes the notes of the GitHub release (see `docs/releasing.md`).
 
-## [0.2] - Unreleased
+## [0.2] - 2026-10-31
 
 ### Changes
-- Built with PS5 Payload SDK v0.45 (the SDK that knows firmware 13.60: v0.41 did not start there at all); the diagnostics show the SDK version and the build time.
+- Built with PS5 Payload SDK v0.45, the first line of SDKs that know firmware 13.60 (v0.41 does not know it, so 0.1 most probably did not start there); the diagnostics show the SDK version and the build time.
 - Transmission 4.1.4 (fixes zero-byte files in torrents, a rare hang on shutdown and hardens `torrent-add`).
 - The "system does not answer" message (game detection, keep awake) no longer stays forever after a console sleep: the 30 s count restarts at wake-up and the service comes back by itself, with a bell entry.
 - Safer and clearer settings page: short captions, details in a "?" popup; download folders have square icon buttons (eject, open folder, remove), "drive not connected" is less alarming.
@@ -16,6 +16,9 @@ every version is `## [<version>]`, and the text under it becomes the notes of th
 - A new release is announced on the settings page: next to the version a link "update available N" to the latest release appears (your browser, not the console, asks GitHub at most once in a few hours; nothing is installed automatically).
 - The build of the payload no longer reuses the Transmission build folder of another version (a warm `.deps` could silently build the old Transmission).
 - An icon installed by an older version is recognised again ("Installed" instead of "not installed", and "Remove" now tells the system).
+
+### Notes
+- Developed and tested on firmware 11.20. Firmware 13.60 is covered by the SDK now, but this release was not tried there. Other firmware versions are not verified.
 
 ## [0.1] - 2026-10-30
 
