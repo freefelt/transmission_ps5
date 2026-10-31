@@ -14,6 +14,8 @@ std::string state_json()
     std::string j = "{";
     j += "\"version\":" + jstr(ps5tm_version());
     j += ",\"tr_version\":" + jstr(PS5TM_TR_VERSION);
+    j += ",\"sdk\":" + jstr(ps5tm_sdk_version());
+    j += ",\"built\":" + jstr(ps5tm_build_time());
     j += ",\"uptime\":" + std::to_string(ps5tm_uptime_seconds());
     j += ",\"ip\":" + jstr(ps5tm_ip());
     j += ",\"rpc_port\":" + std::to_string(g_cfg.daemon_port.load()) + ",\"settings_port_actual\":" + std::to_string(g_settings_port_actual.load()) + ",\"notif_latest\":" + std::to_string(ps5tm_notifications_latest());

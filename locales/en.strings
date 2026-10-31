@@ -363,6 +363,8 @@
 "manager_log_file" = "Manager log file"
 "manager_log_the_memory_of_the" = "“Manager log”: the memory of the running manager. “Manager log file”: shim.log from the disk; it also has the starts of other instances of the manager, for example a new one that could not replace the old one."
 "daemon_log_transmission_log_the_last" = "“Daemon log”, “Transmission log”: the last lines of the logs."
+"build" = "Build"
+"built_in_the_diagnostics" = " · built "
 "me_start_failed_repeated" = "Transmission\nCould not start Transmission {1} times in a row: {2}\nAutomatic attempts stopped. Press Start on the settings page; if that does not help, restart Transmission.elf from Payload Manager."
 "me_start_failed" = "Transmission\nCould not start Transmission: {1}"
 "me_started" = "Transmission started.\nWeb UI: http://{1}"

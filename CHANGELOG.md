@@ -6,6 +6,7 @@ every version is `## [<version>]`, and the text under it becomes the notes of th
 ## [0.2] - Unreleased
 
 ### Changes
+- Built with PS5 Payload SDK v0.45 (the SDK that knows firmware 13.60: v0.41 did not start there at all); the diagnostics show the SDK version and the build time.
 - Transmission 4.1.4 (fixes zero-byte files in torrents, a rare hang on shutdown and hardens `torrent-add`).
 - The "system does not answer" message (game detection, keep awake) no longer stays forever after a console sleep: the 30 s count restarts at wake-up and the service comes back by itself, with a bell entry.
 - Safer and clearer settings page: short captions, details in a "?" popup; download folders have square icon buttons (eject, open folder, remove), "drive not connected" is less alarming.

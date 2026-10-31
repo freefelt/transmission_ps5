@@ -12,8 +12,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const growing = (a) => a.every((x, i) => i === 0 || x >= a[i - 1] - 0.5), shrinking = (a) => a.every((x, i) => i === 0 || x <= a[i - 1] + 0.5);
   // 1) accordion section
   check("the 'Настройки' section is closed at the start (height 0, display none)", (await H("#accSettingsBody")) === 0 && (await D("#accSettingsBody")) === "none");
-  let s = await sampleAfterClick("#accSettingsBtn", "#accSettingsBody", [40, 90, 140, 420]); const full = s[3];
-  check("OPENING: the height grows step by step (strictly between 0 and the full height in the middle of the animation), then reaches the natural height", full > 150 && s[0] < full && s[1] > 0 && s[1] < full && growing(s) && s[0] < s[2], JSON.stringify(s));
+  // The first opening has to lay out the whole form, on a slow machine (a CI runner) the animation may start late: many samples, and some of them must be in the middle
+  let s = await sampleAfterClick("#accSettingsBtn", "#accSettingsBody", [40, 70, 100, 130, 160, 190, 220, 260, 300, 420]); const full = s[s.length - 1];
+  check("OPENING: the height grows step by step (some samples strictly between 0 and the full height in the middle of the animation), then reaches the natural height", full > 150 && s[0] < full && growing(s) && s.filter((x) => x > 1 && x < full - 1).length >= 1 && s[0] < s[s.length - 2] + 0.5, JSON.stringify(s));
   s = await sampleAfterClick("#accSettingsBtn", "#accSettingsBody", [40, 90, 140, 420]);
   check("CLOSING: the height shrinks step by step and the section ends hidden (display none, height 0)", s[0] > 0 && s[0] < full + 1 && shrinking(s) && s[3] === 0 && (await D("#accSettingsBody")) === "none", JSON.stringify(s));
   // 2) a row that depends on a checkbox

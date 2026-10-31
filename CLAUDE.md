@@ -37,6 +37,8 @@ The maintainer (Alexander) tests on a real console (firmware 11.20) and works in
 10. Keep a change to Transmission itself small: put the logic into our own code (`src/daemon/`) and let the patch only add a call, with
    a check that fails the build if the anchor is not found.
 
+**The SDK and the firmware.** The startup code of the SDK (`crt`) knows the firmware versions one by one: v0.40 added 13.00/13.20, v0.41 13.40, v0.42 13.60 (and 13.42 is in between), v0.45 also 14.00/14.10. A payload built with an SDK that does not know the firmware of the console does not even reach `main()` (on 13.60 with v0.41 nothing was created in `/data/Transmission` and no notification was shown). So when a new firmware appears, look for the SDK release first. ShadowMountPlus is always built with the newest SDK. The Diagnostics card shows the SDK version of the build; `scripts/deps.sh` keeps a stamp (`.deps/ps5-payload-sdk/.ps5tm-sdk-version`) so that a warm `.deps` is replaced when the pinned version changes.
+
 ## 2. Layout and build
 
 ```
@@ -55,7 +57,7 @@ resources/               icons (PNG)
 tests/                   see section 9
 ```
 
-- `scripts/deps.sh` downloads the PS5 SDK (ps5-payload-sdk v0.41) and zlib, libevent, OpenSSL, curl into `.deps/`, every one pinned by
+- `scripts/deps.sh` downloads the PS5 SDK (ps5-payload-sdk v0.45) and zlib, libevent, OpenSSL, curl into `.deps/`, every one pinned by
   version and SHA-256. Transmission 4.1.4 (`transmission-4.1.4.tar.xz`, SHA-256 `86e7aa02…5d22`) is downloaded by `build-elf.sh`.
   Nothing newer is ever picked up silently.
 - `build-elf.sh` unpacks Transmission, applies `patches/ps5/` then `patches/transmission/` with `patch -p1` (the tree is unpacked again

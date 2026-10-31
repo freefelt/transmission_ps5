@@ -42,6 +42,16 @@ unsigned ps5tm_resume_generation(void)
 }
 
 /* Wrapper version and uptime (for the settings page) */
+const char *ps5tm_sdk_version(void)
+{
+    return PS5TM_SDK_VERSION;
+}
+
+const char *ps5tm_build_time(void)
+{
+    return __DATE__ " " __TIME__;
+}
+
 const char *ps5tm_version(void)
 {
     return SHIM_VERSION;

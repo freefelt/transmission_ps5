@@ -75,7 +75,7 @@ static void handle_connection(int fd, std::string const& client)
     {
         std::vector<char> ring(7000);
         std::size_t const ring_len = ps5tm_log_ring_copy(ring.data(), ring.size());
-        std::string text = std::string{ "=== version " } + ps5tm_version() + ", running " + std::to_string(ps5tm_uptime_seconds()) + " s\n";
+        std::string text = std::string{ "=== version " } + ps5tm_version() + ", SDK " + ps5tm_sdk_version() + ", built " + ps5tm_build_time() + ", running " + std::to_string(ps5tm_uptime_seconds()) + " s\n";
         text += "\n=== Transmission check\n" + run_isolated(ps5tm_rpc_probe_text, 8, "check") + "\n";
         text += "\n=== disks\n" + run_isolated(disks_report_text, 8, "disks") + "\n";
         text += "\n=== threads\n" + ps5tm_thread_snapshot_text();

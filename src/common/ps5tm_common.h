@@ -84,6 +84,11 @@
 #error "SHIM_VERSION is not defined: build with ./build.sh or pass -DSHIM_VERSION=\"x.y.z\""
 #endif
 
+/* The version of the SDK the payload is built with: the build scripts pass -DPS5TM_SDK_VERSION="v0.45" (it is shown in the diagnostics). */
+#ifndef PS5TM_SDK_VERSION
+#define PS5TM_SDK_VERSION "unknown"
+#endif
+
 #define DAEMON_STACK (8u * 1024u * 1024u)
 #define WORKER_STACK (2u * 1024u * 1024u)
 

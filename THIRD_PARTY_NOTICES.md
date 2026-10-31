@@ -14,7 +14,7 @@ downloads them into `.deps/`); this file is a summary and not legal advice.
 | [OpenSSL](https://www.openssl.org) | 3.0.15 | Apache-2.0 |
 | [curl](https://curl.se) | 8.11.1 | curl license (MIT-style) |
 | Mozilla CA certificates (through [certifi](https://github.com/certifi/python-certifi)) | 2026.07.22 | MPL-2.0 |
-| PS5 payload SDK ([ps5-payload-dev/sdk](https://github.com/ps5-payload-dev/sdk), John Törnblom) | v0.41 | GPL-3.0-or-later for its scripts, headers and start files (as stated in their headers); it also carries LLVM's libc++ (Apache-2.0 with LLVM exception) and FreeBSD-derived headers (BSD) |
+| PS5 payload SDK ([ps5-payload-dev/sdk](https://github.com/ps5-payload-dev/sdk), John Törnblom) | v0.45 | GPL-3.0-or-later for its scripts, headers and start files (as stated in their headers); it also carries LLVM's libc++ (Apache-2.0 with LLVM exception) and FreeBSD-derived headers (BSD) |
 
 Libraries bundled in the Transmission 4.1.4 sources (`third-party/`), built into the daemon:
 

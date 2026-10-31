@@ -71,7 +71,7 @@ int main(void)
     if (ensure_dir(LOGS_DIR) != 0 || ensure_dir(DAEMON_DIR) != 0)
         notify_system("Transmission: cannot create %s or %s (errno %d)", LOGS_DIR, DAEMON_DIR, errno);
     shim_fd = open(SHIM_LOG, O_WRONLY | O_CREAT | O_APPEND, 0644);
-    shim_log("==== Transmission manager " SHIM_VERSION " (built " __DATE__ " " __TIME__ ") pid=%d ====", (int)getpid());
+    shim_log("==== Transmission manager " SHIM_VERSION " (built " __DATE__ " " __TIME__ ", SDK " PS5TM_SDK_VERSION ") pid=%d ====", (int)getpid());
     install_diagnostics();
 
     /* settings: created on the first run (read before the first notifications) */

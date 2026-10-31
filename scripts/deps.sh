@@ -15,9 +15,9 @@ SRC="$DEPS/src"
 LOGS="$DEPS/logs"
 SDK_DIR="$DEPS/ps5-payload-sdk"
 
-SDK_VERSION="v0.41"
+SDK_VERSION="v0.45" # v0.42 is the first with firmware 13.60 (the startup code of the SDK knows the firmware versions); v0.41 stops at 13.40/13.42
 SDK_URL="https://github.com/ps5-payload-dev/sdk/releases/download/${SDK_VERSION}/ps5-payload-sdk.zip"
-SDK_SHA256="ebfb0acb5260511951a80e17db41650c62d20a8caf8659a230b928dc85005984"
+SDK_SHA256="5fac64093d0e3e69f2584ce7935f24f703f622d9681f1495c85b9f00d1291a2c"
 
 ZLIB_URL="https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz"
 ZLIB_SHA256="9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"
@@ -82,7 +82,8 @@ for t in curl unzip tar make perl cmake; do have "$t" || die "not found: $t"; do
 printf 'LLVM: %s (%s)\n' "$LLVM_CONFIG" "$("$LLVM_CONFIG" --version)"
 
 # ---------- 2. SDK ----------
-if [ ! -f "$SDK_DIR/toolchain/prospero.sh" ]; then
+# the stamp records which version is installed: a folder .deps from an older version must not keep the old SDK (the libraries below live inside it and are built again)
+if [ ! -f "$SDK_DIR/toolchain/prospero.sh" ] || [ "$(cat "$SDK_DIR/.ps5tm-sdk-version" 2>/dev/null)" != "$SDK_VERSION" ]; then
     say "ps5-payload-sdk $SDK_VERSION"
     fetch "$SDK_URL" "$DL/ps5-payload-sdk-$SDK_VERSION.zip" "$SDK_SHA256"
     rm -rf "$DEPS/.sdk-extract"; mkdir -p "$DEPS/.sdk-extract"
@@ -90,6 +91,7 @@ if [ ! -f "$SDK_DIR/toolchain/prospero.sh" ]; then
     [ -f "$DEPS/.sdk-extract/ps5-payload-sdk/toolchain/prospero.sh" ] || die "the SDK archive has no toolchain"
     rm -rf "$SDK_DIR"
     mv "$DEPS/.sdk-extract/ps5-payload-sdk" "$SDK_DIR"
+    printf '%s\n' "$SDK_VERSION" >"$SDK_DIR/.ps5tm-sdk-version"
     rmdir "$DEPS/.sdk-extract"
 else
     say "SDK already installed: $SDK_DIR"
@@ -101,6 +103,12 @@ source "$SDK_DIR/toolchain/prospero.sh"
 PREFIX_DIR="$PS5_SYSROOT$PREFIX"          # where the libraries are really installed on the host
 mkdir -p "$PREFIX_DIR/lib" "$PREFIX_DIR/include"
 JOBS="$(ncpu)"
+
+# The libraries are rebuilt when the pinned versions change: a stamp in the prefix records which set they were built from (a cache of an older run must not keep them)
+LIBS_ID="zlib:$ZLIB_SHA256 libevent:$LIBEVENT_SHA256 openssl:$OPENSSL_SHA256"
+if [ "$(cat "$PREFIX_DIR/.ps5tm-libs" 2>/dev/null)" != "$LIBS_ID" ]; then
+    rm -f "$PREFIX_DIR"/lib/libz.* "$PREFIX_DIR"/lib/libevent* "$PREFIX_DIR"/lib/libssl.* "$PREFIX_DIR"/lib/libcrypto.* "$PREFIX_DIR"/lib64/libssl.* "$PREFIX_DIR"/lib64/libcrypto.* "$PREFIX_DIR/.ps5tm-libs"
+fi
 
 unpack() { # archive dirname
     [ -d "$SRC/$2" ] || tar -xf "$1" -C "$SRC"
@@ -157,6 +165,8 @@ if [ ! -f "$PREFIX_DIR/lib/libssl.a" ] && [ ! -f "$PREFIX_DIR/lib64/libssl.a" ];
 else
     say "OpenSSL: already built"
 fi
+
+printf '%s\n' "$LIBS_ID" >"$PREFIX_DIR/.ps5tm-libs"
 
 # ---------- 6. Summary ----------
 say "Done. Libraries installed in $PREFIX_DIR"

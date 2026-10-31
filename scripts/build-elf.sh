@@ -92,6 +92,7 @@ for t in curl tar make perl cmake; do have "$t" || die "not found: $t"; done
 
 # shellcheck disable=SC1091
 source "$SDK_DIR/toolchain/prospero.sh"
+SDK_VER="$(cat "$SDK_DIR/.ps5tm-sdk-version" 2>/dev/null || echo unknown)" # shown in the diagnostics
 P="$PS5_SYSROOT$PREFIX"
 for lib in libz.a libssl.a libcrypto.a; do
     [ -f "$P/lib/$lib" ] || die "missing $lib. Run scripts/deps.sh first"
@@ -101,6 +102,9 @@ JOBS="$(ncpu)"
 export CMAKE_POLICY_VERSION_MINIMUM=3.5
 
 # ---------- 2. libcurl ----------
+# rebuilt when the pinned version changes (the stamp records which one is installed; a cache of an older run must not keep the old one)
+CURL_ID="curl:$CURL_SHA256"
+if [ "$(cat "$P/.ps5tm-curl" 2>/dev/null)" != "$CURL_ID" ]; then rm -f "$P/lib/libcurl.a" "$P/.ps5tm-curl"; fi
 if [ ! -f "$P/lib/libcurl.a" ]; then
     say "libcurl $CURL_VER"
     fetch "$CURL_URL" "$DL/curl-$CURL_VER.tar.xz" "$CURL_SHA256"
@@ -118,6 +122,7 @@ if [ ! -f "$P/lib/libcurl.a" ]; then
         make -j"$JOBS"
         make DESTDIR="$PS5_SYSROOT" install
     ) >"$LOGS/curl.log" 2>&1 || { tail -30 "$LOGS/curl.log"; die "curl build failed (log: $LOGS/curl.log)"; }
+    printf '%s\n' "$CURL_ID" >"$P/.ps5tm-curl"
 else
     say "libcurl: already built"
 fi
@@ -129,7 +134,7 @@ fi
 # look later (dht/dht.h not found). curl above gets DESTDIR explicitly, it does not need this.
 unset DESTDIR
 TR_SRC="$SRC/transmission-$TR_VER"
-TR_BUILD="$BUILD/transmission-$TR_VER" # one build folder per version: a folder configured for another version would silently build the old sources
+TR_BUILD="$BUILD/transmission-$TR_VER-sdk-$SDK_VER" # one build folder per version of Transmission AND of the SDK: a folder configured for another version would silently build the old sources or with the old SDK
 fetch "$TR_URL" "$DL/transmission-$TR_VER.tar.xz" "$TR_SHA256"
 
 # Patched sources = the pristine archive + patches/ps5/*.patch + patches/transmission/*.patch (in this order).
@@ -255,7 +260,7 @@ compile_c_role() { # role-macro  object-dir  sources...
     local macro="$1" odir="$2"; shift 2
     mkdir -p "$odir"; rm -f "$odir"/*.o
     for f in "$@"; do
-        "$CC" -O2 -fPIC -Wall -Wextra -D"$macro" -DSHIM_VERSION="\"$SHIM_VER\"" -I"$SRCDIR" -I"$SRCDIR/common" -I"$GEN" -c "$f" -o "$odir/$(basename "$f" .c).o"
+        "$CC" -O2 -fPIC -Wall -Wextra -D"$macro" -DSHIM_VERSION="\"$SHIM_VER\"" -DPS5TM_SDK_VERSION="\"$SDK_VER\"" -I"$SRCDIR" -I"$SRCDIR/common" -I"$GEN" -c "$f" -o "$odir/$(basename "$f" .c).o"
     done
 }
 compile_c_role PS5TM_DAEMON "$GEN/obj-daemon" "$SRCDIR"/common/*.c "$SRCDIR"/daemon/*.c

@@ -360,6 +360,8 @@
 "manager_log_file" = "Файл журнала менеджера"
 "manager_log_the_memory_of_the" = "«Журнал менеджера»: память работающего менеджера. «Файл журнала менеджера»: shim.log с диска; в нём есть и запуски других экземпляров менеджера, например нового, который не смог заменить старый."
 "daemon_log_transmission_log_the_last" = "«Журнал демона», «Журнал Transmission»: последние строки журналов."
+"build" = "Сборка"
+"built_in_the_diagnostics" = " · собрана "
 "me_start_failed_repeated" = "Transmission\nНе удалось запустить Transmission {1} раз подряд: {2}\nАвтоматические попытки прекращены. Нажмите «Запустить» на странице настроек; если не поможет, перезапустите Transmission.elf через Payload Manager."
 "me_start_failed" = "Transmission\nНе удалось запустить Transmission: {1}"
 "me_started" = "Transmission запущен.\nВеб-интерфейс: http://{1}"

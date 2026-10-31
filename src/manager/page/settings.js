@@ -180,7 +180,7 @@ function topRender(s){var upd=updTag&&verNewer(updTag,s.version)?updTag:'',key=s
  t.appendChild(document.createTextNode(' · Transmission '+s.tr_version+' · console address '+s.ip))}
 updCheck(); // after the definitions above: it reads UPD_URL
 function render(s){state=s;ssRender(s.stats);$('fdCard').classList.toggle('fd-mono',s.config.web_icons==='mono');$('fdCard').classList.toggle('fd-open-on',s.config.web_openfolder==='bfpilot'||s.config.web_openfolder==='webfm');if(!formBuilt)buildForm(s.config);dmRender(s.daemon);notifState(s.notif_latest); var tr='http://'+location.hostname+':'+s.rpc_port+'/';
- topRender(s);
+ topRender(s);$('bdState').textContent='SDK '+s.sdk+' · built '+s.built;
  $('trLink').href=tr;if(/PlayStation/i.test(navigator.userAgent||''))$('trLink').removeAttribute('target');else $('trLink').target='ps5tm-transmission-web'; /* a named tab: the next click goes to the same tab instead of opening a new one (no noopener: it would always open a new one) */
  var st=s.stats,t='',run=s.daemon.state==='running';
  t+=kv('Manager is running',fmt(s.uptime));

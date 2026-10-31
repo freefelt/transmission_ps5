@@ -53,6 +53,8 @@ char const* ps5tm_ip(void);
 int ps5tm_current_ip(char* out, std::size_t size);
 unsigned ps5tm_resume_generation(void);
 char const* ps5tm_version(void);
+char const* ps5tm_sdk_version(void);
+char const* ps5tm_build_time(void);
 long ps5tm_uptime_seconds(void);
 int ps5tm_process_running(char const* name);
 extern volatile int ps5tm_daemon_finished;

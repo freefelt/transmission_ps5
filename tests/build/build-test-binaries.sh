@@ -38,7 +38,7 @@ compile_c_role() { # object-dir  role-flags  sources...  (src/common/*.c is comp
     local odir="$1" flags="$2"; shift 2
     mkdir -p "$odir"; rm -f "$odir"/*.o
     for f in "$@"; do
-        clang-18 -O2 -fPIC -D_GNU_SOURCE $flags -DSHIM_VERSION="\"$VERSION\"" -Wall -Wextra -I"$SRCDIR" -I"$SRCDIR/common" -I"$GEN" -c "$f" -o "$odir/$(basename "$f" .c).o"
+        clang-18 -O2 -fPIC -D_GNU_SOURCE $flags -DSHIM_VERSION="\"$VERSION\"" -DPS5TM_SDK_VERSION="\"host\"" -Wall -Wextra -I"$SRCDIR" -I"$SRCDIR/common" -I"$GEN" -c "$f" -o "$odir/$(basename "$f" .c).o"
     done
 }
 compile_c_role "$OUT/obj-daemon" "-DPS5TM_DAEMON -DPS5TM_HOST_TEST" "$SRCDIR"/common/*.c "$SRCDIR"/daemon/*.c
