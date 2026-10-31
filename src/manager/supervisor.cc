@@ -4,6 +4,8 @@
 
 #include "core_internal.h"
 
+#include <chrono>
+
 namespace ps5tm_core
 {
 
@@ -369,6 +371,8 @@ static std::string daemon_launch_and_wait()
     set_state(DaemonStarting);
     char err[220] = {};
     long const log_before = file_size_of(DaemonLog);
+    auto const launch_t0 = std::chrono::steady_clock::now();
+    auto const since_launch = [&] { return std::chrono::duration<double>(std::chrono::steady_clock::now() - launch_t0).count(); };
     shim_log("daemon: launching %s", DaemonFile);
     if (ps5tm_launch_elf(DaemonFile, ps5tm_daemon_size(), err, sizeof(err)) != 0)
     {
@@ -381,6 +385,7 @@ static std::string daemon_launch_and_wait()
         return text;
     }
     g_d.launched_at = static_cast<long>(std::time(nullptr));
+    shim_log("daemon: the ELF was handed to the loader in %.1f s", since_launch()); // where the seconds of a slow start go: the loader, the process, or the daemon itself
 
     int pid = 0;
     for (int i = 0; i < 30 && pid == 0; ++i)
@@ -388,6 +393,7 @@ static std::string daemon_launch_and_wait()
         sleep(1);
         pid = daemon_pid();
     }
+    shim_log("daemon: the process %s %.1f s after the launch", pid != 0 ? "appeared" : "did not appear", since_launch());
     if (pid == 0)
     {
         set_state(DaemonStopped);
@@ -403,7 +409,7 @@ static std::string daemon_launch_and_wait()
             g_d.unhealthy_since = 0;
             g_d.epoch++;
             set_state(DaemonRunning);
-            shim_log("daemon: running (pid %d)", pid);
+            shim_log("daemon: running (pid %d); RPC answered %.1f s after the launch", pid, since_launch());
             return "";
         }
         sleep(1);
@@ -437,6 +443,7 @@ static bool terminate_process(char const* name, int grace_seconds)
         return true;
     }
     shim_log("daemon: SIGTERM to %s pid %d (waiting up to %d s)", name, pid, grace_seconds);
+    auto const term_t0 = std::chrono::steady_clock::now();
     kill(pid, SIGTERM);
     if (!wait_process_gone(name, pid, grace_seconds))
     {
@@ -448,6 +455,7 @@ static bool terminate_process(char const* name, int grace_seconds)
             return false;
         }
     }
+    shim_log("daemon: pid %d is gone %.1f s after SIGTERM", pid, std::chrono::duration<double>(std::chrono::steady_clock::now() - term_t0).count());
     if (std::strcmp(name, DaemonName) == 0)
     {
         g_d.pid = 0;

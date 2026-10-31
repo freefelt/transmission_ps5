@@ -69,14 +69,19 @@ button.ok{background:#2e9e5b}
 .fd-info{min-width:0;flex:1}
 .fd-path{font-weight:600;word-break:break-all}
 .fd-meta{font-size:13px;color:#93a0b3;margin-top:2px}
-.fd-meta.bad,.msg.bad,.fd-red{color:#ff6b6b}
+.msg.bad,.fd-red{color:#ff6b6b}
+.fd-meta.bad{color:#8fa1c4}
 #pkName{width:100%;box-sizing:border-box;margin:6px 0;padding:8px 10px;border-radius:6px;border:1px solid #3a4658;background:#0f1319;color:#e6e9ee;font-size:16px}
 #pkDisk{max-width:100%}
 .btnrow{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
 .btnrow button{margin:0}
 .um-holders{border:1px solid #3a2a2a;background:#1d1517;border-radius:10px;padding:10px 12px;margin:8px 0}.um-hd{font-weight:600;margin-bottom:6px}.um-row{margin:6px 0}.um-sample{font-size:12px;color:#8793a4;word-break:break-all}
-.fd-warnrow{white-space:nowrap}.fd-eject{padding:10px;display:inline-flex;align-items:center;justify-content:center;line-height:1.2;box-sizing:border-box}.fd-eject svg{width:1.2em;height:1.2em;fill:currentColor}
+.fd-warnrow{white-space:nowrap}.fd-btn{margin:0;padding:10px;display:inline-flex;align-items:center;justify-content:center;line-height:1.2;box-sizing:border-box}.fd-btn svg{width:1.2em;height:1.2em;fill:currentColor}
+.fd-btn.stroke svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fd-open{display:none}.fd-open-on .fd-open{display:inline-flex}.fd-btn:disabled{opacity:.4;cursor:default}
 .fd-q{margin:0 0 0 8px;width:22px;height:22px;padding:0;border-radius:50%;border:1px solid #8793a4;background:none;color:#c5ceda;font-size:13px;line-height:20px;cursor:pointer;vertical-align:middle}.fd-q:hover{background:#2a3340}
+/* the small “?” at the end of a title: it must not make the line taller, so the lines below stay where they are */
+.fd-q.hq{width:16px;height:16px;margin:-4px 0 -4px 6px;font-size:11px;line-height:14px;letter-spacing:0;text-transform:none;font-weight:600;vertical-align:middle;position:relative;top:-2px}
 .pk-card{width:min(680px,94vw);max-width:94vw}
 .pk-disk{display:flex;align-items:center;gap:10px;margin:6px 0 10px}.pk-disk label{font-weight:600;flex:none}.pk-disk select{flex:1;min-width:0}
 .pk-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin:0 0 8px;font-size:14px}

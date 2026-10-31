@@ -36,7 +36,7 @@ def seg_a():   # settings page (needs the mounted disk /mnt/usb2)
     node("settings_page_test.js", t=290); kill_all(); loader.close(); clean_mounts(); sh("rm -rf /mnt/usb2 /mnt/usb3 /data/pagetest")
 def seg_b():   # the daemon card and the icon card (clean state)
     sh("rm -rf /user/app /tmp/ps5_usb1 /tmp/ps5tm_icon_*; mkdir -p /user/app"); loader = stack_up()
-    node("daemon_card_test.js"); node("icon_page_test.js"); kill_all(); loader.close()
+    node("daemon_card_test.js"); node("icon_page_test.js"); node("update_notice_test.js"); kill_all(); loader.close()
     if os.path.exists("/tmp/ps5tm_icon_mode"): os.remove("/tmp/ps5tm_icon_mode")
 def seg_c():   # the sleep block
     sh("rm -rf /user/app /tmp/ps5_usb1 /tmp/ps5tm_icon_*; mkdir -p /user/app"); loader = stack_up(); add_torrent("C_paused_by_user.bin", True)

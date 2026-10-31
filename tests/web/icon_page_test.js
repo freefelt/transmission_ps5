@@ -7,9 +7,17 @@ let pass = 0, fail = 0; const check = (n, ok, e) => { (ok ? pass++ : fail++); co
   const dom = await JSDOM.fromURL("http://127.0.0.1:9092/", { runScripts: "dangerously", resources: "usable", pretendToBeVisual: true, beforeParse(w) { w.PS5_ANIM_MS = 0; w.confirm = () => true; w.alert = () => {}; w.addEventListener("error", (e) => errors.push(String(e.message))); } });
   const d = dom.window.document, $ = (i) => d.getElementById(i); await wait(2500);
   check("no JS errors; the icon card exists with its buttons", errors.length === 0 && !!$("iconState") && !!$("iconInstall") && !!$("iconRemove"), errors.join(";"));
-  check("the card explains that a separate short process does the registration", /transmission_i\.elf/.test(d.body.textContent) && /не пострадают/.test(d.body.textContent));
+  { $("iconHead").querySelector(".fd-q").click(); await wait(300);
+    check("the '?' in the title of the card explains that a separate short process does the registration", $("fdModal").style.display === "flex" && /transmission_i\.elf/.test($("fdWarnBody").textContent) && /не пострадают/.test($("fdWarnBody").textContent) && $("iconHead").textContent.startsWith("Иконка на вкладке"));
+    $("fdCancel").click(); await wait(300); }
   let done = false; for (let i = 0; i < 40 && !done; i++) { await wait(500); done = $("iconState").textContent === "установлена"; }
   check("the automatic installation at the first start finished: 'установлена', the buttons are usable", done && !$("iconInstall").disabled && !$("iconRemove").disabled, $("iconState").textContent);
+  const MARK = "/data/Transmission/icon/registered", RES = "/data/Transmission/icon/result", state = async () => (await (await fetch("http://127.0.0.1:9092/api/state")).json()).icon.installed;
+  fs.unlinkSync(MARK); const adopted = await state();
+  check("an icon installed by an older version (the app folder, our param.json and the helper's answer 'ok', but no 'registered' marker) counts as installed, and the marker is written again", adopted === true && fs.existsSync(MARK));
+  fs.unlinkSync(MARK); fs.writeFileSync(RES, "error: test\n"); const notAdopted = await state();
+  check("the same files after a FAILED attempt of the helper ('error: ...') are NOT taken for an installation, no marker is written", notAdopted === false && !fs.existsSync(MARK));
+  fs.writeFileSync(RES, "ok\n"); await state(); check("(back to 'ok': adopted again)", fs.existsSync(MARK));
   fs.writeFileSync("/tmp/ps5tm_icon_mode", "delay");
   $("iconRemove").click(); await wait(500);
   check("'Удалить' asks first in OUR popup ('Удалить иконку?', the red 'Удалить' button); nothing is removed before the confirmation", $("cfmModal").style.display === "flex" && /Удалить иконку\?/.test($("cfmTitle").textContent) && $("cfmOk").textContent === "Удалить" && $("iconState").textContent === "установлена");

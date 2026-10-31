@@ -165,6 +165,7 @@ extern "C" void* ps5tm_monitor_thread(void*)
         if (resumed || slept >= ResumeGapSeconds)
         {
             shim_log("monitor: resume detected (SIGCONT / time gap)");
+            syssvc_resumed(std::time(nullptr));
             net_event(3);
         }
 

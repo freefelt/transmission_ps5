@@ -12,7 +12,7 @@ namespace ps5tm_core
 // ---------------------------------------------------------------- console system service inside the manager
 // This used to be done by a separate helper process transmission_s.elf (port 1234): that is how library-load hangs were dealt with.
 // Now the calls come from a worker thread of the manager. The libraries are loaded via dlopen in the order Ipmi, UserService, SystemService (like Payload Manager)
-// in that thread, so a possible hang affects only it. A call that does not return within SysHangSeconds disables the service until restart (a bell entry).
+// in that thread, so a possible hang affects only it. A call that does not return within SysHangSeconds switches the service off until the call returns (a bell entry).
 // Crash protection: before loading and the first call of each function its name is written to syssvc_probe.txt; if a previous run crashed or hung inside
 // a function, the name remains in syssvc_skip.txt and the service does not start (delete the file to retry).
 // What the service does: whether a game is on screen or minimised (the sceSystemServiceGetUIStatus value: 0x20010 is the home screen, any other value with a game running means "on screen"),
@@ -69,12 +69,9 @@ static int ss_stub_get_title(std::uint32_t, char* title)
 
 static int ss_stub_get_ui(void* out)
 {
-    if (ss_mode_has("hang"))
+    while (ss_mode_has("hang")) // the call does not return while the file says so (and goes on when the word is removed)
     {
-        for (;;)
-        {
-            sleep(1000);
-        }
+        sleep(1);
     }
     std::memset(out, 0, 12);
     unsigned ui = (access("/tmp/ps5tm_sys_app", F_OK) == 0 && access("/tmp/ps5tm_sys_suspended", F_OK) != 0) ? 0x20036 : 0x20010;
@@ -140,7 +137,8 @@ struct SysState
 {
     std::mutex m;
     bool ready = false; // libraries are loaded, the needed functions are found
-    bool hung = false; // a call did not return within SysHangSeconds: the service is no longer used
+    bool hung = false; // a call did not return within SysHangSeconds: the service is not used until the call returns
+    std::time_t hung_at = 0;
     bool disabled = false; // a previous start crashed or hung inside a function
     std::string error;
     int app_id = -1;
@@ -402,23 +400,42 @@ void syssvc_main()
     }
 }
 
-// Once a second from the monitor: a call that does not return within SysHangSeconds disables the service (the thread stays hung until the console restarts).
+// The console woke up (the monitor saw a gap or SIGCONT): the clock jumped, and a call that was running when the console went to sleep has not had a
+// chance to return yet. The 30 seconds are counted from the wake-up.
+void syssvc_resumed(std::time_t now)
+{
+    if (g_ss_busy_since.load() != 0)
+    {
+        g_ss_busy_since = now;
+    }
+}
+
+// Once a second from the monitor: a call that does not return within SysHangSeconds switches the service off. It is switched on again when the call returns
+// (the thread polls again): a slow answer, for example right after the console woke up, is not a reason to keep game detection off until the payload is restarted.
 void syssvc_watchdog(std::time_t now)
 {
     std::time_t const since = g_ss_busy_since.load();
     char const* const name = g_ss_busy_name.load();
+    std::lock_guard<std::mutex> lock(g_ss.m);
+    if (g_ss.hung)
+    {
+        if (g_ss.last_poll >= g_ss.hung_at)
+        {
+            g_ss.hung = false;
+            g_ss.error.clear();
+            shim_log("syssvc: the system answers again: the system service features are on");
+            journal_event(ps5tm_tr("mr_ss_back"));
+        }
+        return;
+    }
     if (since == 0 || name == nullptr || now - since < SysHangSeconds)
     {
         return;
     }
-    std::lock_guard<std::mutex> lock(g_ss.m);
-    if (g_ss.hung)
-    {
-        return;
-    }
     g_ss.hung = true;
+    g_ss.hung_at = now;
     g_ss.error = std::string{ "the call " } + name + " did not return";
-    shim_log("syssvc: HUNG in %s for %d s: the system service features are off until the manager is restarted", name, static_cast<int>(now - since));
+    shim_log("syssvc: HUNG in %s for %d s: the system service features are off until the call returns", name, static_cast<int>(now - since));
     journal_event(ps5tm_tr("mr_ss_hung", { std::string{ name } }));
 }
 

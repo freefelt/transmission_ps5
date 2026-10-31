@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Step 2: libcurl + Transmission 4.1.3 + wrapper  ->  build/Transmission-<version>.elf
+# Step 2: libcurl + Transmission 4.1.4 + wrapper  ->  build/Transmission-<version>.elf
 # Run after scripts/deps.sh (needs the SDK, zlib and OpenSSL from .deps). Normally you run ./build.sh in the repository root instead.
 #
 #   scripts/build-elf.sh            # build everything (idempotent)
@@ -12,6 +12,9 @@ SRCDIR="$REPO/src"
 WEBCLIENT="$REPO/patches/web-client"
 LOCALES="$REPO/locales"
 VERSION="$(tr -d '[:space:]' <"$REPO/VERSION")"
+# A test build handed out between releases: PS5TM_DEBUG=N ./build.sh. The page and shim.log then say "0.2 debug N" (two builds of one version can be told apart);
+# the name of the file stays Transmission-<VERSION>.elf. Releases (CI) never set it.
+SHIM_VER="$VERSION${PS5TM_DEBUG:+ debug $PS5TM_DEBUG}"
 DEPS="$REPO/.deps"
 DL="$DEPS/dl"
 SRC="$DEPS/src"
@@ -26,9 +29,9 @@ CURL_VER="8.11.1"
 CURL_URL="https://github.com/curl/curl/releases/download/curl-8_11_1/curl-${CURL_VER}.tar.xz"
 CURL_SHA256="c7ca7db48b0909743eaef34250da02c19bc61d4f1dcedd6603f109409536ab56"
 
-TR_VER="4.1.3"
+TR_VER="4.1.4"
 TR_URL="https://github.com/transmission/transmission/releases/download/${TR_VER}/transmission-${TR_VER}.tar.xz"
-TR_SHA256="ce7d2d8b101f7eb54bc3cf0bc55f52f7ebd4a25fa48e00bdca9a7e0fc02617da"
+TR_SHA256="86e7aa020cdf64826447034bc85f4d3b7c848d8c0891d9dc9b9fddfb2c805d22"
 
 CA_URL="https://raw.githubusercontent.com/certifi/python-certifi/2026.07.22/certifi/cacert.pem"
 CA_SHA256="9cc2a774b5198dcff14d9be1e66091f538975d867ce029a96bce15a55dfd730f"
@@ -126,7 +129,7 @@ fi
 # look later (dht/dht.h not found). curl above gets DESTDIR explicitly, it does not need this.
 unset DESTDIR
 TR_SRC="$SRC/transmission-$TR_VER"
-TR_BUILD="$BUILD/transmission"
+TR_BUILD="$BUILD/transmission-$TR_VER" # one build folder per version: a folder configured for another version would silently build the old sources
 fetch "$TR_URL" "$DL/transmission-$TR_VER.tar.xz" "$TR_SHA256"
 
 # Patched sources = the pristine archive + patches/ps5/*.patch + patches/transmission/*.patch (in this order).
@@ -148,6 +151,10 @@ if [ ! -d "$TR_SRC" ] || [ "$(cat "$PATCH_STAMP" 2>/dev/null)" != "$PATCH_ID" ];
     printf '%s\n' "$PATCH_ID" >"$PATCH_STAMP"
 fi
 
+# a build folder configured for another source tree (the repository was moved or renamed) is thrown away
+if [ -f "$TR_BUILD/CMakeCache.txt" ] && ! grep -qx "CMAKE_HOME_DIRECTORY:INTERNAL=$TR_SRC" "$TR_BUILD/CMakeCache.txt"; then
+    rm -rf "$TR_BUILD"
+fi
 if [ ! -f "$TR_BUILD/CMakeCache.txt" ]; then
     say "Configuring Transmission $TR_VER"
     mkdir -p "$TR_BUILD"
@@ -248,7 +255,7 @@ compile_c_role() { # role-macro  object-dir  sources...
     local macro="$1" odir="$2"; shift 2
     mkdir -p "$odir"; rm -f "$odir"/*.o
     for f in "$@"; do
-        "$CC" -O2 -fPIC -Wall -Wextra -D"$macro" -DSHIM_VERSION="\"$VERSION\"" -I"$SRCDIR" -I"$SRCDIR/common" -I"$GEN" -c "$f" -o "$odir/$(basename "$f" .c).o"
+        "$CC" -O2 -fPIC -Wall -Wextra -D"$macro" -DSHIM_VERSION="\"$SHIM_VER\"" -I"$SRCDIR" -I"$SRCDIR/common" -I"$GEN" -c "$f" -o "$odir/$(basename "$f" .c).o"
     done
 }
 compile_c_role PS5TM_DAEMON "$GEN/obj-daemon" "$SRCDIR"/common/*.c "$SRCDIR"/daemon/*.c
@@ -294,13 +301,15 @@ DAEMON_DIR="$TR_BUILD/daemon"
 
 BASE_LINK="$(cat "$DAEMON_DIR/CMakeFiles/transmission-daemon.dir/link.txt")"
 BASE_LINK="${BASE_LINK//CMakeFiles\/transmission-daemon.dir\/daemon.cc.o/$GEN/daemon_main.o}"
-DAEMON_WRAPS="-Wl,--wrap=pthread_create -Wl,--wrap=fork -Wl,--wrap=execvp -Wl,--wrap=open -Wl,--wrap=close -Wl,--wrap=pwrite -Wl,--wrap=pread -Wl,--wrap=ftruncate -Wl,--wrap=rename -Wl,--wrap=mkdir -Wl,--wrap=unlink -Wl,--wrap=fsync -Wl,--wrap=stat -Wl,--wrap=lstat -Wl,--wrap=statvfs"
+DAEMON_WRAPS="-Wl,--wrap=getaddrinfo -Wl,--wrap=pthread_create -Wl,--wrap=fork -Wl,--wrap=execvp -Wl,--wrap=open -Wl,--wrap=close -Wl,--wrap=pwrite -Wl,--wrap=pread -Wl,--wrap=ftruncate -Wl,--wrap=rename -Wl,--wrap=mkdir -Wl,--wrap=unlink -Wl,--wrap=fsync -Wl,--wrap=stat -Wl,--wrap=lstat -Wl,--wrap=statvfs"
 cmd="${BASE_LINK//-o transmission-daemon/-o $PARTS/transmission_d.elf $GEN/obj-daemon/*.o $DAEMON_WRAPS}"
 ( cd "$DAEMON_DIR" && eval "$cmd" ) >"$LOGS/link-transmission_d.log" 2>&1 \
     || { tail -30 "$LOGS/link-transmission_d.log"; die "linking transmission_d.elf failed (log: $LOGS/link-transmission_d.log)"; }
 "$STRIP" --strip-debug "$PARTS/transmission_d.elf"
 # the Transmission patch has to be inside: otherwise the build would silently produce an ELF without it (for example not rebuilt)
 grep -aq "RPC restart requested" "$PARTS/transmission_d.elf" || die "transmission_d.elf has no rpc-server.cc patch"
+# and it has to be built from the sources of THIS version (a stale build folder once produced 4.1.3 under the name of 4.1.4)
+grep -aq "/transmission-$TR_VER/libtransmission/" "$PARTS/transmission_d.elf" || die "transmission_d.elf was not built from the Transmission $TR_VER sources (delete $BUILD/transmission-* and build again)"
 
 # transmission_i.elf: the icon install helper. A separate short-lived process: all libSceAppInstUtil work happens in it
 # (the libraries as in the working samples, BFpilot and websrv: SceIpmi first, then SceAppInstUtil),

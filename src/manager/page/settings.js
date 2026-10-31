@@ -11,40 +11,41 @@ var SCHEMA=[
  {k:'notify_torrent_error',t:'bool',l:'Torrent error',d:'No space, no access, disk error.'},
  {k:'notify_tracker_error',t:'bool',l:'Tracker error',d:'Often happens and is temporary.'},
  {k:'notify_low_disk_space',t:'bool',l:'Low disk space'},
- {k:'low_disk_warn_gb',t:'int',l:'“Low space”: threshold (GB)',d:'A notification when the free space on the disk is below this (or below what is left to download). 1–100000.'},
- {k:'low_disk_critical_gb',t:'int',l:'“Disk almost full”: threshold (GB)',d:'A second, more urgent notification. Must be smaller than the first. 0 = do not send.'},
- {k:'notify_game_pause',t:'bool',l:'Pausing and resuming downloads during a game',d:'A console message when downloads are paused because of a game (“Game on screen: downloads paused: N”) and when they are resumed. Works together with the “Pause during a game” setting. These events always go to the log (the bell).'},
+ {k:'low_disk_warn_gb',t:'int',l:'“Low space”: threshold (GB)',d:'A notification when the free space on the disk is below this (1–100000).',m:['The notification is also sent when the free space is less than what is left to download.']},
+ {k:'low_disk_critical_gb',t:'int',l:'“Disk almost full”: threshold (GB)',d:'A second, more urgent notification. Smaller than the first; 0 = do not send.'},
+ {k:'notify_game_pause',t:'bool',l:'Pausing and resuming downloads during a game',d:'A console message when downloads are paused or resumed because of a game.',m:['For example: “Game on screen: downloads paused: N”. Works together with the “Pause during a game” setting.','These events always go to the log (the bell).']},
  {h:'Games'},
- {k:'game_pause',t:'sel',l:'Pause during a game',d:'When a game is running on the console, active downloads and seeds are paused and resumed after the game. “Only when the game is on screen”: paused while the game is on screen; if it is minimised, downloading continues. “While the game is running”: paused also while minimised, until the game is closed. The manager sets the pause: torrents you stopped yourself are not started by it. A torrent started or added during a game stays as it is. If the game state cannot be determined, no pause is set, and a pause that is already set is lifted after a minute. After the game is closed (or minimised, depending on the setting) downloads resume after 30 seconds, so that they do not jump back and forth when you visit the settings or start another game.',o:[['off','Do not pause'],['screen','Pause only when the game is on screen'],['running','Pause while the game is running, including minimised']]},
- {h:'Transmission web interface'},
- {k:'web_openfolder',t:'sel',l:'“Open folder” item in the torrent menu',d:'The item appears in the torrent context menu (right click or long press) on the Transmission page and opens the folder of that torrent in a file manager: BFpilot (port 5905) or PS5 Web File Manager (port 8888). In a desktop browser the page opens in a new tab, on the console in the same window. Applies after the Transmission page is refreshed.',o:[['off','Do not show'],['bfpilot','Open in BFpilot'],['webfm','Open in PS5 Web File Manager']]},
- {k:'web_diskbar',t:'sel',l:'Show disk status',d:'A panel above the download list. “Show used”: disks that hold torrents and downloads. “Show active”: only disks that have running (not stopped) torrents. Applies after the Transmission page is refreshed.',o:[['off','Do not show'],['all','Show used'],['active','Show active']]},
- {k:'web_icons',t:'sel',l:'Icons',d:'Toolbar buttons, menus and torrent icons (multi-file torrents show a folder). Applies after the Transmission page is refreshed.',o:[['color','Color'],['mono','Monochrome']]},
- {k:'web_theme',t:'sel',l:'Theme',d:'Applies after the Transmission page is refreshed.',o:[['dark','Dark'],['light','Light']]}
+ {k:'game_pause',t:'sel',l:'Pause during a game',d:'Active downloads and seeds are paused while a game is running and resumed after it.',m:['“When the game is on screen”: paused while the game is on screen; if it is minimised, downloading continues. “When the game is running”: paused also while minimised, until the game is closed.','The manager sets the pause: torrents you stopped yourself are not started by it. A torrent started or added during a game stays as it is.','If the game state cannot be determined, no pause is set, and a pause that is already set is lifted after a minute.','Downloads resume 30 seconds after the game is closed (or minimised, depending on the setting), so that they do not jump back and forth when you visit the settings or start another game.'],o:[['off','Do not pause'],['screen','When the game is on screen'],['running','When the game is running']]},
+ {h:'Transmission web interface (applies after the page is refreshed)'},
+ {k:'web_openfolder',t:'sel',l:'“Open folder” item',d:'Opens the folder of a torrent in a file manager from its menu.',m:['The item appears in the torrent context menu (right click or long press) on the Transmission page and opens the folder of that torrent in BFpilot (port 5905) or PS5 Web File Manager (port 8888).','In a desktop browser the page opens in a new tab, on the console in the same window.'],o:[['off','Do not show'],['bfpilot','BFpilot'],['webfm','PS5 Web File Manager']]},
+ {k:'web_diskbar',t:'sel',l:'Show disk status',d:'A panel above the download list.',m:['“Show used”: disks that hold torrents and downloads. “Show active”: only disks that have running (not stopped) torrents.'],o:[['off','Do not show'],['all','Show used'],['active','Show active']]},
+ {k:'web_icons',t:'sel',l:'Icons',d:'Toolbar buttons, menus and torrent icons.',o:[['color','Color'],['mono','Monochrome']]},
+ {k:'web_theme',t:'sel',l:'Theme',o:[['dark','Dark'],['light','Light']]}
 ];
 var EXPERT_SCHEMA=[
  {h:'Ports'},
- {k:'settings_port',t:'int',l:'Port of this page',d:'1024–65535. The first free port starting from the one given is used; the address arrives in a notification. After saving, the page opens on the new port.'},
- {k:'daemon_port',t:'int',l:'Port of the Transmission web interface',d:'1024–65535. When it changes, Transmission restarts: torrents are paused and resumed.'},
+ {k:'settings_port',t:'int',l:'Port of this page',d:'1024–65535. If the port is busy, the next free one is used.',m:['The first free port starting from the one given is used; the address arrives in a notification. After saving, the page opens on the new port.']},
+ {k:'daemon_port',t:'int',l:'Port of the Transmission web interface',d:'1024–65535. Changing it restarts Transmission: torrents are paused and resumed.'},
  {h:'Delays (seconds)'},
- {k:'wake_delay_seconds',t:'int',l:'Pause after waking from sleep',d:'How long to wait after the console wakes up before starting Transmission and recreating the socket of this page (0–300).'},
+ {k:'wake_delay_seconds',t:'int',l:'Pause after waking from sleep',d:'Wait after the console wakes up before starting Transmission (0–300).'},
  {k:'poll_interval_seconds',t:'int',l:'Daemon polling period',d:'Torrent notifications arrive with this delay (1–600).'},
+ {h:'Rest mode'},
+ {k:'sleep_method',t:'sel',l:'Rest mode method',d:'How the console goes to rest mode.',m:['“System request”: the console goes to sleep the same way as if you chose it in the menu yourself (with an animation); if the system request is not available, the direct method is used.','“Direct”: the system state flag, as in ps5-linux-loader, the screen just goes dark.'],o:[['native','System request (recommended)'],['direct','Direct (system flag)']]},
  {h:'Log retention'},
  {k:'notifications_keep_days',t:'int',l:'Notifications (bell), days',d:'Entries older than this are deleted. 1–365.'},
- {k:'logs_keep_days',t:'int',l:'Debug logs, days',d:'The manager, daemon and Transmission logs (the logs/ folder) are split by day; files older than this are deleted. 1–90.'},
+ {k:'logs_keep_days',t:'int',l:'Debug logs, days',d:'The logs of the manager, daemon and Transmission, kept by day (1–90).'},
  {h:'Transmission (daemon)'},
  {k:'daemon_restart_after_seconds',t:'int',l:'Restart Transmission if it does not respond (s)',d:'Only when the network is working. 0 = do not restart (0–3600).'},
- {k:'daemon_network_restart_seconds',t:'int',l:'Restart Transmission after a network change (s)',d:'The network dropped and came back, the IP address changed or the console woke from rest mode: if Transmission does not respond on the console’s current address, it is restarted after this many seconds (instead of waiting for the time above). If it responds, nothing is done. 0 = do not restart (0–3600).'},
- {k:'daemon_stop_grace_seconds',t:'int',l:'Wait for a graceful shutdown (s)',d:'How long to wait for Transmission to close by itself before it is terminated by force (5–120).'}
+ {k:'daemon_network_restart_seconds',t:'int',l:'Restart Transmission after a network change (s)',d:'If Transmission does not respond after the network changed (0 = do not restart, 0–3600).',m:['A network change is: the network dropped and came back, the IP address changed or the console woke from rest mode.','If Transmission does not respond on the console’s current address, it is restarted after this many seconds (instead of waiting for the time above). If it responds, nothing is done.']},
+ {k:'daemon_stop_grace_seconds',t:'int',l:'Wait for a graceful shutdown (s)',d:'How long to wait for Transmission to close before it is terminated by force (5–120).'}
 ];
 var ALL=SCHEMA.concat(EXPERT_SCHEMA);
 var SLEEP_SCHEMA=[
  {k:'autosleep_action',t:'sel',l:'Action',d:'What to do when all downloads are finished (or the timeout expired): go to rest mode or turn the console off.',o:[['sleep','Go to rest mode'],['poweroff','Turn the console off']]},
- {k:'sleep_method',t:'sel',l:'Rest mode method',d:'“System request”: the console goes to sleep the same way as if you chose it in the menu yourself (with an animation); if the system request is not available, the direct method is used. “Direct”: the system state flag, as in ps5-linux-loader, the screen just goes dark. Applies to the auto action.',o:[['native','System request (recommended)'],['direct','Direct (system flag)']]},
- {k:'autosleep_timeout_minutes',t:'int',l:'Timeout (minutes)',d:'The maximum time: after it, following the activation, the action is performed in any case, even if the downloads have not finished (for example, no seeders). 1–1440.'},
+ {k:'autosleep_timeout_minutes',t:'int',l:'Timeout (minutes)',d:'The action is performed after this time in any case (1–1440).',m:['The maximum time: after it, following the activation, the action is performed even if the downloads have not finished (for example, no seeders).']},
  {k:'sleep_notify_before',t:'bool',l:'Show a notification with a delay before the action',d:'Off: the action happens at once, without a notification.'},
- {k:'sleep_countdown_seconds',t:'int',l:'Delay (seconds)',d:'0 = at once. During this time you can cancel on this page.'},
- {k:'keep_awake',t:'bool',l:'Do not let the console fall asleep by itself',d:'Works only after you press Activate (auto sleep or auto power off): while it is active, Transmission tells the system every 10 minutes that the console is in use, so it does not fall asleep on its own timer. Without activation the system sleeps as usual. The console settings may specify an automatic sleep time (at least 20 minutes), and without this option it can fire before everything is downloaded.'}
+ {k:'sleep_countdown_seconds',t:'int',l:'Delay (seconds)',d:'0 = at once. You can cancel on this page during the delay.'},
+ {k:'keep_awake',t:'bool',l:'Do not let the console fall asleep by itself',d:'Keeps the console awake while an action is activated.',m:['Works only after you press Activate (auto sleep or auto power off): while it is active, Transmission tells the system every 10 minutes that the console is in use, so it does not fall asleep on its own timer. Without activation the system sleeps as usual.','The console settings may specify an automatic sleep time (at least 20 minutes), and without this option it can fire before everything is downloaded.']}
 ];
 var state=null,formBuilt=false,orig={};
 function $(id){return document.getElementById(id)}
@@ -54,12 +55,16 @@ function buildFields(f,schema,c,pre){f.innerHTML='';
  schema.forEach(function(s){
   if(s.h){var h=document.createElement('div');h.className='help';h.style.cssText='margin:10px 0 2px;font-weight:600;color:#8fb7ff';h.textContent=s.h;f.appendChild(h);return}
   var r=document.createElement('div');r.className='row';r.id=pre+'row_'+s.k;var l=document.createElement('label');l.setAttribute('for',pre+s.k);l.textContent=s.l;
+  if(s.m)helpBtn(l,s.l,s.m);
   if(s.d){var d=document.createElement('span');d.className='help';d.textContent=s.d;l.appendChild(d)}
   var i=s.t==='sel'?document.createElement('select'):document.createElement('input');i.id=pre+s.k;
   if(s.t==='sel'){s.o.forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];i.appendChild(op)});i.value=c[s.k]}
   else if(s.t==='bool'){i.type='checkbox';i.checked=!!c[s.k]}else if(s.t==='text'){i.type='text';i.value=c[s.k];i.style.width='240px'}else{i.type='number';i.value=c[s.k]}
   i.addEventListener(s.t==='bool'||s.t==='sel'?'change':'input',refreshButtons);
   r.appendChild(l);r.appendChild(i);f.appendChild(r);orig[s.k]=c[s.k]})}
+helpBtn($('asHead'),'When all downloads finish',['If all downloads are paused or removed, the action deactivates itself and the console does nothing.','The activation is not saved: after sleep, power off or a manager restart it is off. If the console woke up (including when it went to sleep by itself on its own timer), the activation is cleared as well: turn it on again.']);
+helpBtn($('iconHead'),'Icon on the “Media” tab',['The app registers a separate short process, transmission_i.elf, with the system (the Payload Manager method): if it hangs, the manager and Transmission are not affected, and there will be no automatic retries.','Installation takes a few seconds.']);
+helpBtn($('dgInfo'),'Diagnostics',['“Check Transmission” shows whether it accepts a local connection and responds.','“Threads”: where the process threads stand (the wait column shows what a thread is waiting for).','“Manager log”: the memory of the running manager. “Manager log file”: shim.log from the disk; it also has the starts of other instances of the manager, for example a new one that could not replace the old one.','“Daemon log”, “Transmission log”: the last lines of the logs.','“Drives”: which of /mnt/ext*, /mnt/usb* are connected (press with the drive and without it).','“Mount points”: all mount points the manager sees (USB and M.2 first).']);
 function diskClamp(){var w=$('f_low_disk_warn_gb'),c=$('f_low_disk_critical_gb');if(!w||!c)return;
  var wv=parseInt(w.value,10),cv=parseInt(c.value,10);if(isNaN(wv))return;
  var top=Math.max(0,wv-1);c.min=0;c.max=top;w.min=1;
@@ -107,7 +112,7 @@ function popOpen(el,disp){
  el.classList.remove('ps5in');void el.offsetWidth;el.classList.add('ps5in');clearTimeout(el._ps5p);el._ps5p=setTimeout(function(){el.classList.remove('ps5in')},ms+60)
 }
 function diskDeps(){var n=$('f_notify_low_disk_space');if(!n)return;['f_row_low_disk_warn_gb','f_row_low_disk_critical_gb'].forEach(function(id){var r=$(id);if(r){r.classList.add('sub');slideShow(r,n.checked,'')}})}
-function sleepDeps(){var ac=$('sf_autosleep_action'),mr=$('sf_row_sleep_method');if(ac&&mr){mr.classList.add('sub');slideShow(mr,ac.value==='sleep','')}var n=$('sf_sleep_notify_before'),d=$('sf_sleep_countdown_seconds'),r=$('sf_row_sleep_countdown_seconds');
+function sleepDeps(){var n=$('sf_sleep_notify_before'),d=$('sf_sleep_countdown_seconds'),r=$('sf_row_sleep_countdown_seconds');
  if(n&&d){d.disabled=!n.checked;r.classList.add('sub');slideShow(r,n.checked,'')}}
 var msgUntil=0;
 function valOf(s,pre){var e=$(pre+s.k);if(!e)return orig[s.k];var v=s.t==='bool'?e.checked:((s.t==='text'||s.t==='sel')?e.value:parseInt(e.value,10));if(s.t==='int'&&isNaN(v))v=e.value;return v}
@@ -117,7 +122,7 @@ function refreshButtons(){if(!formBuilt)return;var m=dirtyCount(ALL,'f_')+dirtyC
  if(state)sleepRender(state)}
 function resetSchema(schema,pre){schema.forEach(function(s){if(!s.k)return;var e=$(pre+s.k);if(s.t==='bool')e.checked=!!orig[s.k];else e.value=orig[s.k]});sleepDeps();diskDeps();diskClamp();refreshButtons()}
 function buildForm(c){buildFields($('form'),SCHEMA,c,'f_');buildFields($('expertForm'),EXPERT_SCHEMA,c,'f_');buildFields($('sleepForm'),SLEEP_SCHEMA,c,'sf_');
- $('sf_sleep_notify_before').addEventListener('change',sleepDeps);if($('sf_autosleep_action'))$('sf_autosleep_action').addEventListener('change',sleepDeps);sleepDeps();
+ $('sf_sleep_notify_before').addEventListener('change',sleepDeps);sleepDeps();
  $('f_notify_low_disk_space').addEventListener('change',diskDeps);diskDeps();diskClampInit();formBuilt=true;refreshButtons()}
 function saveAll(){var ch={},n=0;[[ALL,'f_'],[SLEEP_SCHEMA,'sf_']].forEach(function(p){p[0].forEach(function(s){if(!s.k)return;var v=valOf(s,p[1]);if(v!==orig[s.k]){ch[s.k]=v;n++}})});
  if(!n)return;var m=$('saveMsg');
@@ -158,8 +163,24 @@ function ssRender(st){var ss=st&&st.syssvc,e=$('ssState');if(!ss){e.textContent=
 if(ss.hung){e.textContent='hung: '+ss.error;return}if(ss.disabled){e.textContent='off: '+ss.error;return}
 if(!ss.ready){e.textContent='loading or not available'+(ss.error?': '+ss.error:'');return}
 e.textContent='running; game: '+(ss.game_state==='none'?'None':ss.game_state==='on_screen'?'on screen':ss.game_state==='minimised'?'running but minimised':'Launched')+(ss.title?' ('+ss.title+')':'')+'; console language: '+(ss.system_lang<0?'Unknown':(ss.system_lang===8?'Russian':'code '+ss.system_lang))+'; keep awake: '+(ss.keepawake?'On':'Off')}
-function render(s){state=s;ssRender(s.stats);$('fdCard').classList.toggle('fd-mono',s.config.web_icons==='mono');if(!formBuilt)buildForm(s.config);dmRender(s.daemon);notifState(s.notif_latest); var tr='http://'+location.hostname+':'+s.rpc_port+'/';
- $('top').textContent='Version '+s.version+' · Transmission '+s.tr_version+' · console address '+s.ip;
+/* A newer release: the browser (not the console) asks GitHub once in a few hours, only to show a link next to the version. Nothing is sent from the console, nothing is
+   installed. Automated browsers (jsdom, headless Chrome) do not ask unless a test sets window.PS5_UPDATE_URL. */
+var UPD_URL=window.PS5_UPDATE_URL||'https://api.github.com/repos/freefelt/transmission_ps5/releases/latest',UPD_PAGE='https://github.com/freefelt/transmission_ps5/releases/latest',updTag='';
+function verParts(v){return String(v).replace(/^v/i,'').split('.').map(function(x){return parseInt(x,10)||0})}
+function verNewer(a,b){var x=verParts(a),y=verParts(b);for(var i=0;i<Math.max(x.length,y.length);i++){var p=x[i]||0,q=y[i]||0;if(p!==q)return p>q}return false}
+function updStore(tag){updTag=tag;try{localStorage.setItem('ps5tm_upd',JSON.stringify({t:Date.now(),tag:tag}))}catch(e){}}
+function updCheck(){if(!window.PS5_UPDATE_URL&&/jsdom|HeadlessChrome/i.test(navigator.userAgent||''))return;
+ try{var c=JSON.parse(localStorage.getItem('ps5tm_upd')||'null');if(c&&c.t<=Date.now()&&Date.now()-c.t<(c.tag?21600000:3600000)){updTag=c.tag||'';return}}catch(e){}
+ try{var x=new XMLHttpRequest();x.open('GET',UPD_URL);x.timeout=10000;
+  x.onload=function(){var tag='';if(x.status===200){try{tag=String(JSON.parse(x.responseText).tag_name||'').replace(/^v/i,'')}catch(e){}}updStore(/^\d+(\.\d+)*$/.test(tag)?tag:'')};
+  x.onerror=x.ontimeout=function(){updStore('')};x.send()}catch(e){}}
+function topRender(s){var upd=updTag&&verNewer(updTag,s.version)?updTag:'',key=s.version+'|'+s.tr_version+'|'+s.ip+'|'+upd,t=$('top');if(t._key===key)return;t._key=key;t.textContent='';
+ t.appendChild(document.createTextNode('Version '+s.version));
+ if(upd){t.appendChild(document.createTextNode(' ('));var a=document.createElement('a');a.href=UPD_PAGE;a.target='_blank';a.rel='noopener';a.textContent='update available'+' '+upd;t.appendChild(a);t.appendChild(document.createTextNode(')'))}
+ t.appendChild(document.createTextNode(' · Transmission '+s.tr_version+' · console address '+s.ip))}
+updCheck(); // after the definitions above: it reads UPD_URL
+function render(s){state=s;ssRender(s.stats);$('fdCard').classList.toggle('fd-mono',s.config.web_icons==='mono');$('fdCard').classList.toggle('fd-open-on',s.config.web_openfolder==='bfpilot'||s.config.web_openfolder==='webfm');if(!formBuilt)buildForm(s.config);dmRender(s.daemon);notifState(s.notif_latest); var tr='http://'+location.hostname+':'+s.rpc_port+'/';
+ topRender(s);
  $('trLink').href=tr;if(/PlayStation/i.test(navigator.userAgent||''))$('trLink').removeAttribute('target');else $('trLink').target='ps5tm-transmission-web'; /* a named tab: the next click goes to the same tab instead of opening a new one (no noopener: it would always open a new one) */
  var st=s.stats,t='',run=s.daemon.state==='running';
  t+=kv('Manager is running',fmt(s.uptime));
@@ -180,7 +201,7 @@ function sleepRender(s){var a=s.autosleep,sl=s.sleep,busy=sl.phase!=='idle';
   if(a.armed||first){$('asArm').checked=!!a.armed;slideShow($('asBox'),a.armed,'block')}} // the checkbox and the section adjust on page load and on activation; after deactivation they stay as they are (the section is hidden when the page is refreshed)
  $('asArm').disabled=!!a.armed; // the checkbox only opens the section; while auto-sleep is activated, the button turns it off
  $('asNote').textContent=a.armed?'Activated. To turn it off, press “Deactivate”.':'The checkbox opens the settings; the “Activate” button turns it on.';
- var dirty=dirtyCount(SLEEP_SCHEMA,'sf_')>0,b=$('asBtn');
+ var dirty=dirtyCount(SLEEP_SCHEMA,'sf_')+dirtyCount(EXPERT_SCHEMA.filter(function(s){return s.k==='sleep_method'}),'f_')>0,b=$('asBtn');
  b.textContent=a.armed?'Deactivate':'Activate';b.className=a.armed?'danger':'ok';b.disabled=busy||(!a.armed&&(!a.can_arm||dirty));
  $('asHint').textContent=a.armed?('Active downloads now: '+a.downloading+'. Time left until the forced action: '+hm(a.timeout_remaining)+'.'):(!a.can_arm?'There are no active downloads: it cannot be activated.':(dirty?'First save the changed settings (the “Save” button at the top right).':'Active downloads: '+a.downloading+'.'));
  $('sleepCount').style.display=busy?'block':'none';
@@ -252,6 +273,8 @@ $('dgSelect').onclick=function(){var r=document.createRange();r.selectNodeConten
 $('dgProbe').onclick=function(){dgGet('/api/diag/probe','Check')};
 $('dgDisks').onclick=function(){dgGet('/api/diag/disks','Drives')};
 $('dgMounts').onclick=function(){dgGet('/api/diag/mounts','Mount points')};
+var DEL_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M10 11v6m4-6v6m5-11v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+var OPEN_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="m6 14l1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>';
 var EJECT_ICON='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 4 4.5 14h15z"/><rect x="5" y="16.5" width="14" height="3" rx="1"/></svg>';
 var fdPending=null,fdFull=false,fdCand=[],FD_KIND={ssd:'M.2 SSD',usb:'USB drive',int:'Internal drive',other:'Other place'};
 function fdSize(b){var g=b/1073741824;return g>=1?g.toFixed(1)+' GB':(b/1048576).toFixed(0)+' MB'}
@@ -279,17 +302,28 @@ function fdRenderNow(j){var list=$('fdList');list.innerHTML='';
   var isExt=!!(f.device&&f.device.indexOf('/dev/es')===0);
   if(isExt){meta.appendChild(document.createTextNode(' · the console’s extended storage'));var qe=document.createElement('button');qe.type='button';qe.className='fd-q';qe.textContent='?';qe.setAttribute('aria-label','More details');qe.onclick=function(){fdWarn('es',f.fs,false)};meta.appendChild(qe)}
   info.appendChild(path);info.appendChild(meta);
-  var del=document.createElement('button');del.className='alt';del.textContent='Remove';del.onclick=function(){fdRemove(f.path)};
+  var del=document.createElement('button');del.type='button';del.className='alt fd-btn fd-del stroke';del.setAttribute('aria-label','Remove');del.title='Remove';del.innerHTML=DEL_ICON;del.onclick=function(){fdRemove(f.path)};
+  var op=document.createElement('button');op.type='button';op.className='alt fd-btn fd-open stroke';op.setAttribute('aria-label','Open folder');op.title='Open folder';op.innerHTML=OPEN_ICON;op.disabled=!f.mounted;op.onclick=function(){fdOpen(f.path)};
   row.appendChild(ic);row.appendChild(info);
-  if(f.kind==='usb'&&f.mounted){var um=document.createElement('button');um.type='button';um.className='alt fd-eject';um.setAttribute('aria-label','Unmount the drive');um.title='Unmount the drive';um.innerHTML=EJECT_ICON;um.onclick=function(){umOpen(f)};row.appendChild(um)}
-  row.appendChild(del);
+  if(f.kind==='usb'&&f.mounted){var um=document.createElement('button');um.type='button';um.className='alt fd-btn fd-eject';um.setAttribute('aria-label','Unmount the drive');um.title='Unmount the drive';um.innerHTML=EJECT_ICON;um.onclick=function(){umOpen(f)};row.appendChild(um)}
+  row.appendChild(op);row.appendChild(del);
   list.appendChild(row)});
  slideShow($('fdEmpty'),!j.folders.length,'block');
  fdFull=j.folders.length>=j.limit;fdLayout();
  fdCand=j.candidates||[]}
 
+/* “Open folder” next to a download folder: the same file managers as the item in the torrent menu of the Transmission page (the saved setting), in the same way: a new tab, on the console the same window. */
+function fdOpen(path){var m=state&&state.config.web_openfolder;if(m!=='bfpilot'&&m!=='webfm')return;
+ var u='http://'+location.hostname+':'+(m==='bfpilot'?5905:8888)+'/#'+encodeURIComponent(path);
+ if(/PlayStation/i.test(navigator.userAgent||''))location.href=u;else window.open(u,'_blank','noopener')}
 function fdLayout(){$('fdShowAdd').style.display=fdFull?'none':'';slideShow($('fdLimit'),fdFull,'block')}
 function fdRefresh(){api('/api/folders',null,function(c,j){if(c===200&&j)fdRender(j)})}
+/* A “?” at the end of a short caption that opens the details in the same window. */
+function helpBtn(el,title,paras){var q=document.createElement('button');q.type='button';q.className='fd-q hq';q.textContent='?';q.setAttribute('aria-label','More details');q.onclick=function(e){e.preventDefault();e.stopPropagation();helpOpen(title,paras)};el.appendChild(q)}
+/* The full description of a setting (the “?” next to its short one), in the same window as the folder warnings. */
+function helpOpen(title,paras){var body=$('fdWarnBody');body.innerHTML='';$('fdWarnTitle').textContent=title;
+ paras.forEach(function(t){var p=document.createElement('p');p.textContent=t;body.appendChild(p)});
+ $('fdConfirm').style.display='none';$('fdCancel').textContent='Got it';popOpen($('fdModal'),'flex');$('fdCancel').focus()}
 /* Folder warnings: internal drive and a file system without sparse files (exFAT, FAT32). confirm=false: help from the “?” icon in the list (no add button). */
 function fdWarn(reason,fs,confirm){var fsw=reason==='fs',body=$('fdWarnBody');body.innerHTML='';
  if(reason==='es'){$('fdWarnTitle').textContent='The console’s extended storage';
@@ -383,6 +417,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'||e.keyCode==
 fdRefresh();setInterval(fdRefresh,10000);
 $('dgThreads').onclick=function(){dgGet('/api/diag/threads','Threads')};
 $('dgLog').onclick=function(){dgGet('/api/diag/log','Log')};
+$('dgLogFile').onclick=function(){dgGet('/api/diag/logfile','Manager log file')};
 $('dgTlog').onclick=function(){dgGet('/api/diag/tlog','Transmission log')};
 $('dgDlog').onclick=function(){dgGet('/api/diag/dlog','Daemon log')};
 refresh();setInterval(refresh,1500);

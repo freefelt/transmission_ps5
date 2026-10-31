@@ -196,7 +196,7 @@ bool ps5tm_game_pause_active(); // downloads are currently paused because of a g
 struct SysSnapshot
 {
     bool ready = false; // system service libraries are loaded
-    bool hung = false; // the call did not return within 30 s: the service is disabled until restart
+    bool hung = false; // the call did not return within 30 s: the service is off until it returns
     bool disabled = false; // the previous start crashed or hung inside the function
     std::string error;
     int game_state = 0; // 0 no game, 1 on screen, 2 minimized, 3 unknown

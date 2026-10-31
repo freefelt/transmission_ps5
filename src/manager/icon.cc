@@ -63,10 +63,47 @@ static std::string param_json()
 
 // "Installed" = the app is registered in the system: the folder exists and so does the marker the manager writes only after
 // the helper answers "ok". Files alone mean nothing: they are left over even from a failed attempt.
+static std::string read_small(char const* path)
+{
+    char buf[1024];
+    FILE* f = std::fopen(path, "rb");
+    if (f == nullptr)
+    {
+        return {};
+    }
+    std::size_t const n = std::fread(buf, 1, sizeof(buf), f);
+    std::fclose(f);
+    return std::string{ buf, n };
+}
+
+// An icon installed by an older version has no "registered" marker, yet the app is registered in the system. It is recognised by what such an installation
+// left: param.json with our title id, the helper's last answer "ok" and no unfinished attempt. The marker is then written with that param.json (what was
+// registered), so the page shows "Installed" and "Remove" tells the system instead of only deleting the files.
+static bool icon_adopt_legacy()
+{
+    struct stat st;
+    std::string const param = read_small(IconParam);
+    std::string const result = read_small(IconResultFile);
+    if (param.find(std::string{ "\"titleId\": \"" } + TitleId + "\"") == std::string::npos || result.compare(0, 2, "ok") != 0 || stat(IconAttemptFile, &st) == 0)
+    {
+        return false;
+    }
+    if (!write_file_atomic(IconRegisteredFile, param.data(), param.size()))
+    {
+        return false;
+    }
+    shim_log("icon: an installation of an older version was found (no marker): adopted");
+    return true;
+}
+
 bool icon_installed()
 {
     struct stat st;
-    return stat(IconDir, &st) == 0 && stat(IconRegisteredFile, &st) == 0;
+    if (stat(IconDir, &st) != 0)
+    {
+        return false;
+    }
+    return stat(IconRegisteredFile, &st) == 0 || icon_adopt_legacy();
 }
 
 // Registered and nothing needs changing: the same param.json (link port) and the same image

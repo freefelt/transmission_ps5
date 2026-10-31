@@ -3,6 +3,19 @@
 All notable changes of the released versions. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the heading of
 every version is `## [<version>]`, and the text under it becomes the notes of the GitHub release (see `docs/releasing.md`).
 
+## [0.2] - Unreleased
+
+### Changes
+- Transmission 4.1.4 (fixes zero-byte files in torrents, a rare hang on shutdown and hardens `torrent-add`).
+- The "system does not answer" message (game detection, keep awake) no longer stays forever after a console sleep: the 30 s count restarts at wake-up and the service comes back by itself, with a bell entry.
+- Safer and clearer settings page: short captions, details in a "?" popup; download folders have square icon buttons (eject, open folder, remove), "drive not connected" is less alarming.
+- Shorter names in the settings (“Pause during a game”: Do not pause / When the game is on screen / When the game is running; “Open folder” item: Do not show / BFpilot / PS5 Web File Manager); the rest mode method moved to the Advanced settings; the dialogs of the Transmission page show our icon instead of the stock logo.
+- Starting and stopping the daemon no longer waits for a DNS server that does not answer (a network that lets only some DNS servers through used to cost 30 seconds each): name lookups of the daemon are given up after 4 seconds, two failures in a row stop further lookups for 30 seconds, and the DHT looks up its bootstrap name in the background.
+- Diagnostics: a button “Manager log file” (shim.log from the disk, with the starts of other instances of the manager) and the same in the diagnostic snapshot.
+- A new release is announced on the settings page: next to the version a link "update available N" to the latest release appears (your browser, not the console, asks GitHub at most once in a few hours; nothing is installed automatically).
+- The build of the payload no longer reuses the Transmission build folder of another version (a warm `.deps` could silently build the old Transmission).
+- An icon installed by an older version is recognised again ("Installed" instead of "not installed", and "Remove" now tells the system).
+
 ## [0.1] - 2026-10-30
 
 The first public release.

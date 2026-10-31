@@ -8,7 +8,7 @@ downloads them into `.deps/`); this file is a summary and not legal advice.
 
 | Component | Version | License |
 |---|---|---|
-| [Transmission](https://transmissionbt.com) | 4.1.3 | GPL-2.0 or GPL-3.0 (your choice) or any later version endorsed by Mnemosyne LLC; linking with OpenSSL is explicitly allowed. Some of its files have more permissive licenses. The patches in `patches/transmission/` and `patches/ps5/` are derived from it and follow its terms. |
+| [Transmission](https://transmissionbt.com) | 4.1.4 | GPL-2.0 or GPL-3.0 (your choice) or any later version endorsed by Mnemosyne LLC; linking with OpenSSL is explicitly allowed. Some of its files have more permissive licenses. The patches in `patches/transmission/` and `patches/ps5/` are derived from it and follow its terms. |
 | [libevent](https://libevent.org) | 2.1.12 | BSD-3-Clause |
 | [zlib](https://zlib.net) | 1.3.1 | zlib license |
 | [OpenSSL](https://www.openssl.org) | 3.0.15 | Apache-2.0 |
@@ -16,7 +16,7 @@ downloads them into `.deps/`); this file is a summary and not legal advice.
 | Mozilla CA certificates (through [certifi](https://github.com/certifi/python-certifi)) | 2026.07.22 | MPL-2.0 |
 | PS5 payload SDK ([ps5-payload-dev/sdk](https://github.com/ps5-payload-dev/sdk), John Törnblom) | v0.41 | GPL-3.0-or-later for its scripts, headers and start files (as stated in their headers); it also carries LLVM's libc++ (Apache-2.0 with LLVM exception) and FreeBSD-derived headers (BSD) |
 
-Libraries bundled in the Transmission 4.1.3 sources (`third-party/`), built into the daemon:
+Libraries bundled in the Transmission 4.1.4 sources (`third-party/`), built into the daemon:
 
 | Library | License |
 |---|---|

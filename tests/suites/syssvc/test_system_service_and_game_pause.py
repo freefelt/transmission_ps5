@@ -1,5 +1,5 @@
 import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "lib"))
-import sys, json, time, os, re, base64, hashlib, subprocess, urllib.request
+import sys, json, time, os, re, base64, hashlib, subprocess, urllib.request, signal
 from harness import *
 import harness; harness.SYS_HELPER = True       # the manager starts the helper itself on start
 GP = "/data/Transmission/game_paused.txt"
@@ -58,7 +58,17 @@ try:
     open("/tmp/ps5tm_sys_mode", "w").write("hang\n")
     t0 = time.time(); ok = wait(lambda: st()["g_a"] != 0 and st()["g_b"] != 0, 130)
     check("after about a minute without an answer about the game state the paused downloads are resumed (fail-safe) and the bell says why (without naming any service)", ok and 50 <= time.time() - t0 <= 125 and any("Не удаётся определить, запущена ли игра" in x and "возобновлены: 2" in x for x in bell()), (f"{time.time()-t0:.0f} s", [x[:80] for x in bell()][-2:]))
-    check("a call that does not return for 30 s switches the service off (hung) and the bell says so", wait(lambda: sysvc().get("hung") is True, 40) and any("не вернулся за 30 с" in x for x in bell()), (sysvc(), [x[:60] for x in bell()][-2:]))
+    check("a call that does not return for 30 s switches the service off (hung) and the bell says so", wait(lambda: sysvc().get("hung") is True, 40) and any("Система не отвечает" in x for x in bell()), (sysvc(), [x[:60] for x in bell()][-2:]))
+    print("== the call returns again: the service is switched on again (it is not off until the payload is restarted)")
+    os.remove("/tmp/ps5tm_sys_mode")
+    check("when the call returns the service works again (hung is false) and the bell says so", wait(lambda: sysvc().get("hung") is False, 15) and any("Система снова отвечает" in x for x in bell()), (sysvc(), [x[:60] for x in bell()][-2:]))
+    print("== a sleep in the middle of a call: the clock jumps, but the call is not declared hung")
+    n_hung = sum("Система не отвечает" in x for x in bell())
+    open("/tmp/ps5tm_sys_mode", "w").write("hang\n"); time.sleep(20)
+    for p in mgr_pids(): os.kill(p, signal.SIGCONT)      # the console woke up: the 30 s start again from now
+    time.sleep(20); mid = sysvc().get("hung")
+    check("20 s before and 20 s after the wake-up: not declared hung (without the restart of the count it would be after 30 s in total)", mid is False, mid)
+    check("but a call that really stays stuck after the wake-up is declared hung 30 s later", wait(lambda: sysvc().get("hung") is True, 25), sysvc())
 finally:
     for f in ("/tmp/ps5tm_sys_app", "/tmp/ps5tm_sys_suspended", "/tmp/ps5tm_sys_mode"):
         if os.path.exists(f): os.remove(f)

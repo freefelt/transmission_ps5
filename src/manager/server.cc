@@ -66,6 +66,11 @@ static void handle_connection(int fd, std::string const& client)
         std::size_t const n = ps5tm_log_ring_copy(buffer.data(), buffer.size());
         send_response(fd, 200, "OK", "text/plain; charset=utf-8", std::string{ "# the wrapper log from memory (the last lines)\n" } + std::string{ buffer.data(), n });
     }
+    else if (req.method == "GET" && req.path == "/api/diag/logfile")
+    {
+        // from the disk: also has the lines of other instances of the manager (for example a new one that could not replace the old one and exited)
+        send_response(fd, 200, "OK", "text/plain; charset=utf-8", std::string{ "# the manager log file (logs/shim.log, the last lines; it also holds the starts of other instances)\n" } + read_file_tail("/data/Transmission/logs/shim.log", 30000));
+    }
     else if (req.method == "GET" && req.path == "/api/diag/all")
     {
         std::vector<char> ring(7000);
@@ -76,6 +81,7 @@ static void handle_connection(int fd, std::string const& client)
         text += "\n=== threads\n" + ps5tm_thread_snapshot_text();
         text += "\n=== console processes and ports\n" + ps5tm_process_list_text();
         text += "\n=== wrapper log (from memory)\n" + std::string{ ring.data(), ring_len };
+        text += "\n=== manager log file (shim.log, latest)\n" + read_file_tail("/data/Transmission/logs/shim.log", 8000);
         text += "\n=== Transmission log (latest)\n" + read_file_tail("/data/Transmission/logs/transmission.log", 3500);
         text += "\n=== daemon output (console.log, latest)\n" + read_file_tail("/data/Transmission/logs/console.log", 3500);
         text += "\n=== daemon wrapper log (daemon.log, latest)\n" + read_file_tail("/data/Transmission/logs/daemon.log", 3500);

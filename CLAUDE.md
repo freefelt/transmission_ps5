@@ -1,6 +1,6 @@
 # Transmission for PS5: project notes for coding agents and contributors
 
-Transmission 4.1.3 as a PS5 homebrew payload. One file, `build/Transmission-<version>.elf` (the **manager**), carries the **daemon**
+Transmission 4.1.4 as a PS5 homebrew payload. One file, `build/Transmission-<version>.elf` (the **manager**), carries the **daemon**
 (`transmission_d.elf`) and a short-lived **icon helper** (`transmission_i.elf`). This file is the long-term memory of the project: the
 decisions, the findings from real consoles, the traps. It is written for an AI coding agent that starts without any context (and for
 humans). Read it before you change anything.
@@ -29,18 +29,19 @@ The maintainer (Alexander) tests on a real console (firmware 11.20) and works in
    timers. Run the tests that match your change (`scripts/test.sh <area>` / `pages <segment>`), and the full set once before a release.
    Do not run them after every edit unless the maintainer asks.
 4. **Never claim something works on the console unless it was tried there.** Say exactly what was verified on the Linux host and what was not.
-5. **Raise the version** (`VERSION`, `0.0.N`, only the last number) after a change that goes to a console. The first public release, `0.1`, was published on 2026-10-30; releases are made by a tag (`docs/releasing.md`).
-6. **New functionality comes with tests.** A test must fail if the feature is broken; measure the real behaviour first, do not guess.
-7. **Reports are short.** Do not list individual tests: "all tests passed", or a short statement of what failed and why.
-8. **Never break the data of existing users** (settings, torrents, `/data/Transmission`): migrations are required.
-9. Keep a change to Transmission itself small: put the logic into our own code (`src/daemon/`) and let the patch only add a call, with
+5. **Test builds between releases** are made with `PS5TM_DEBUG=N ./build.sh` (N counts the builds handed to the maintainer): the page and `shim.log` then say "0.2 debug N" while the file stays `Transmission-0.2.elf`, so two builds of one version can be told apart. Never in a release.
+6. **Raise the version** (`VERSION`, `0.N`: raise the second number, to any larger one, there is no third number) after a change that goes to a console. The first public release, `0.1`, was published on 2026-10-30; releases are made by a tag (`docs/releasing.md`).
+7. **New functionality comes with tests.** A test must fail if the feature is broken; measure the real behaviour first, do not guess.
+8. **Reports are short.** Do not list individual tests: "all tests passed", or a short statement of what failed and why.
+9. **Never break the data of existing users** (settings, torrents, `/data/Transmission`): migrations are required.
+10. Keep a change to Transmission itself small: put the logic into our own code (`src/daemon/`) and let the patch only add a call, with
    a check that fails the build if the anchor is not found.
 
 ## 2. Layout and build
 
 ```
 build.sh                 deps -> build-elf -> check-imports; result build/Transmission-<VERSION>.elf
-VERSION                  0.0.N; becomes -DSHIM_VERSION and the name of the ELF
+VERSION                  0.N; becomes -DSHIM_VERSION and the name of the ELF
 scripts/                 deps.sh (SDK + libraries), build-elf.sh, check-imports.sh, allowed-imports.txt, test.sh
 src/common/              code shared by daemon and manager (log, crash diagnostics, process, volume info, files); compiled twice, once per role
 src/daemon/              the wrapper around Transmission: guard (folder protection), settings enforcement, I/O watchdog, web files, log events
@@ -55,7 +56,7 @@ tests/                   see section 9
 ```
 
 - `scripts/deps.sh` downloads the PS5 SDK (ps5-payload-sdk v0.41) and zlib, libevent, OpenSSL, curl into `.deps/`, every one pinned by
-  version and SHA-256. Transmission 4.1.3 (`transmission-4.1.3.tar.xz`, SHA-256 `ce7d2d8b…17da`) is downloaded by `build-elf.sh`.
+  version and SHA-256. Transmission 4.1.4 (`transmission-4.1.4.tar.xz`, SHA-256 `86e7aa02…5d22`) is downloaded by `build-elf.sh`.
   Nothing newer is ever picked up silently.
 - `build-elf.sh` unpacks Transmission, applies `patches/ps5/` then `patches/transmission/` with `patch -p1` (the tree is unpacked again
   whenever the set of patches changes: a stamp file next to it), builds the Transmission library and the object `daemon/daemon.cc.o`
@@ -89,7 +90,7 @@ loop that drives everything), `diag`; the UI side: `server`, `http`, `handlers` 
 (`src/ps5tm_cfg.h`). Beware of global objects with constructors in different translation units (initialization order).
 
 **Daemon wrapper** (`src/daemon/`): `guard.c` (the download folders protection: `ps5tm_guard_*`), `settings.c` (`guard_enforce_settings`),
-`iowatch.c` (the I/O watchdog), `web_setup.c` (writes the web theme, icons, language and config files; the CA bundle), `log_event.c`,
+`dns.c` (a time limit and a circuit breaker for `getaddrinfo`, linked with `--wrap`), `iowatch.c` (the I/O watchdog), `web_setup.c` (writes the web theme, icons, language and config files; the CA bundle), `log_event.c`,
 `main.c`. Shared: `src/common/volume.c` (`ps5_volume_info`, `ps5tm_disk_kind_of_root`, `ps5tm_fs_needs_fix`, `ps5tm_resolve_alias`).
 
 **What the daemon does besides being Transmission:**
@@ -109,15 +110,15 @@ loop that drives everything), `diag`; the UI side: `server`, `http`, `handlers` 
 rotated by day), `icon/`, `locales/` (user language files), `guard_messages.txt` (translated refusals for the daemon),
 `syssvc_probe.txt`/`syssvc_skip.txt`, `transmission/` (daemon.port, web_theme, web_icons, web_diskbar, web_openfolder, web_lang.js,
 usbfix_off.txt, `config/` = the settings and the state of Transmission, `web/`, tmp, cacert.pem). The icon is in `/user/app/TRNS00001/sce_sys/`
-and is updated only after "Remove" and "Install" in the icon section.
+and is updated only after "Remove" and "Install" in the icon section. "Installed" = the folder exists **and** the marker `/data/Transmission/icon/registered` (the param.json that was registered); an installation of an older version has no marker and is adopted when `param.json` has our title id, the helper's last answer in `icon/result` is `ok` and `icon/attempt` does not exist.
 
 **The system-service thread** (`src/manager/syssvc.cc`, inside the manager; there is no helper process any more): loads
 `libSceIpmi`, `libSceUserService`, `libSceSystemService` through `dlopen` in that order (like Payload Manager) and takes functions with
 `dlsym` by name: `sceLncUtilGetAppIdOfRunningBigApp`, `sceLncUtilGetAppTitleId`, `sceSystemServiceGetUIStatus`,
 `sceSystemServiceParamGetInt`, `sceSystemServicePowerTick`, `sceShellCoreUtilResetAutoPowerDownTimer`, `sceSystemServiceRequestPowerOff`.
 No new imports. It provides the game state, the console language (Russian is code 8), "keep awake" and the system sleep request.
-Protection: a call that does not return in 30 s (`SysHangSeconds`, checked by the monitor) switches the service off until restart (a bell
-entry); before loading and before the first call of every function its name is written to `syssvc_probe.txt`; if the previous run crashed
+Protection: a call that does not return in 30 s (`SysHangSeconds`, checked by the monitor) switches the service off until that call returns (the monitor restarts the 30 s count after a wake-up, because the clock jumps while the console sleeps; when the thread polls again the service is on again; both changes are bell
+entries); before loading and before the first call of every function its name is written to `syssvc_probe.txt`; if the previous run crashed
 or hung there, the name goes to `syssvc_skip.txt` and the service does not start until that file is deleted. Loading `libSceSystemService`
 from the main process used to hang; the order and the separate thread solved it. State: `stats.syssvc` in `/api/state` and a line in
 "Diagnostics". On the Linux host `dlopen` is replaced by stubs driven by files (section 9).
@@ -174,6 +175,7 @@ What we add (the main items):
 - Look and motion: our own dialogs and menus with enter/exit animations (`Element.prototype.remove` is deferred while the exit animation
   runs: dialogs 150 ms, menus 120 ms, the inspector 240 ms), the inspector slides in, tab content slides left/right, rounded tabs and priority
   buttons, a file icon and bold folders in the file tree, the torrent path as plain text on the right of the size line.
+- Our icon (`images/apple-touch-icon.png`, the one of the payload and of the tab) instead of the stock Transmission logo in the dialogs (`.dialog-logo` is overridden in `css/app-additions.css`).
 - Translation inside the client (section 6).
 
 ## 6. Translations
@@ -264,6 +266,7 @@ mount name: `/dev/ssd*` is M.2, `/dev/es*.crypt` and `/dev/da*` are USB.
   if the process does not die even after SIGKILL (a thread inside a disk system call, can last minutes), no second instance is started and
   it is retried after 60 s (`kill_failed`); the page says "busy, not answering N s" and "forced restart in M s", and for a stuck process advises to unplug the USB disk.
   The bell records hangs of 10 s and longer with the duration (one entry per episode).
+- **DNS must never hold up the daemon (0.2).** A home network that lets only some DNS servers through made every lookup of a name last 30 s: the DHT bootstrap lookup (in the session thread, at the start) stopped the daemon for 30 s before it listened on 9091, and the "stopped" announces at shutdown waited for the trackers' names (27-30 s). Now `patches/transmission/0012` looks the DHT name up in a thread, and `src/daemon/dns.c` (`--wrap=getaddrinfo`, so libtransmission and the static libcurl of the PS5 build are covered) runs every lookup of a name in a helper thread with a 4 s limit; two timeouts in a row open a breaker (30 s of immediate `EAI_AGAIN`, then one probe). Numeric addresses and `AI_NUMERICHOST` never wait. Tested on the host (`test_dns_does_not_block.py`: a silent DNS server on 127.0.0.1:53, `/etc/resolv.conf` replaced and restored): start in 1 s; the wrapper itself by a small C program (`tests/unit/dns_limit_test.c`). **Not covered on the host: the libcurl of the test machine is a shared library, so the tracker lookups and the shutdown were not measured with a dead DNS; on the console they go through the wrapper.** A DNS that is merely slow (more than 4 s) now fails, by design.
 - **Network change restart** (`daemon_network_restart_seconds`): events are the network going away and back, a changed IP, waking from rest mode. After an
   event, every 2 s the manager checks whether the daemon accepts connections **on the current IP** (connect up to 1.5 s, then `GET /transmission/rpc`; any HTTP answer will do); if it does not
   answer for N s it restarts softly (once per event, not while the daemon waits for a disk, the check ends after N + 180 s). Test hook: `/tmp/ps5tm_test_ip`.
@@ -406,11 +409,14 @@ Please send "Diagnostics → Mounts" (in full) with answers:
 **Refactoring for open source (the version in the repository is the state after it):** stage 1 everything out of the build script into files; 2 the folder layout; 3 English as the main language of the settings
 page; 4 splitting of the big files (web client, settings page, `ui` and `notify` C++ into modules, `main.c` into common/daemon/manager); 5 tests renamed and tools rewritten in Node; 6 documentation.
 Done in stage 6: `README.md`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, `patches/README.md`, this file, the safety notes translated, comments translated to English, the old history and migration notes removed from the tree.
-**CI (green since 2026-10-30: Build about 1.5 min with a warm cache, Tests about 21 min):** `.github/workflows/` `build.yml` (build + import check + translation check + lint on every push and pull request; no macOS job, by decision), `tests.yml` (smoke suites and page tests on every push/PR, all suites on request and before a release), a branch push whose commit already has a tag is skipped by Build and Tests (a `gate` job looks at `git ls-remote --tags`; the Release of that tag runs the same checks, **not yet seen working on GitHub**), `release.yml` (a tag equal to `VERSION` (no `v`: `0.1`): full tests, build, a GitHub release with `Transmission-<version>.elf`, its `.sha256` and the notes of `CHANGELOG.md`); how: `docs/releasing.md`. `scripts/test.sh` and `tests/run_pages.py` now return a failure status. Lessons of the first runs: a clang-tidy found on the runner broke the Transmission build (`-DRUN_CLANG_TIDY=OFF` now), the host test build needs libc++/OpenSSL/curl/zlib dev packages, and tests that look at the manager's once-a-second state must wait for it (a slow runner exposes such races).
+**CI (green since 2026-10-30: Build about 1.5 min with a warm cache, Tests about 21 min):** `.github/workflows/` `build.yml` (build + import check + translation check + lint on every push and pull request; no macOS job, by decision), `tests.yml` (smoke suites and page tests on every push/PR, all suites on request and before a release), a branch push whose commit already has a tag is skipped by Build and Tests (a `gate` job looks at `git ls-remote --tags`; the Release of that tag runs the same checks, **not yet seen working on GitHub**), `release.yml` (a tag equal to `VERSION` (no `v`: `0.1`): full tests, build, a GitHub release with `Transmission-<version>.elf`, its `.sha256` and the notes of `CHANGELOG.md`); how: `docs/releasing.md`. `scripts/test.sh` and `tests/run_pages.py` now return a failure status. Lessons of the first runs (and of 0.2: the PS5 build folder of Transmission used to be the same for every version and configured once, so after a version bump a warm `.deps` silently built the OLD Transmission; it is now `.deps/build/transmission-<version>` with a check of the source path and a check that the daemon contains the sources of the pinned version, and CI restores caches by prefix, so it could have hit the same): a clang-tidy found on the runner broke the Transmission build (`-DRUN_CLANG_TIDY=OFF` now), the host test build needs libc++/OpenSSL/curl/zlib dev packages, and tests that look at the manager's once-a-second state must wait for it (a slow runner exposes such races).
 **Not done yet:** `docs/` pages in English (architecture, adding a patch or a language), a final full test run, and the clean git history (the maintainer will force-push when 0.1 is ready; the old transcripts must stay out of it).
 The icons are shipped as ready CSS (`patches/web-client/icons/README.md` says where they come from); regenerating them is not supported by the repository. The home-screen tile editor was a separate project (not here).
 
 **Ideas and plans (not started; discuss first):**
+- **Make the ELF smaller** (planned after 0.2; 0.2 is 12.3 MB, the manager is about 1.2 MB, the embedded daemon 10.5 MB; some loaders do not run big ELFs, and the 13.60 report may be one). Measured on 2026-10-31: (1) `strip --strip-all` (keeps `.dynsym`) takes the daemon from 10.5 to 8.5 MB, about 10 MB in total, near-zero risk; today only `--strip-debug` is used. (2) Keep the daemon deflated in the manager (gzip -9 gives 3.45 MB for the stripped daemon, about 4.7 MB in total) and inflate it into the file at start: new code, zlib has to be linked into the manager, must be tried on a console. (3) `-Os`, `-ffunction-sections` and `--gc-sections` for the daemon and its libraries: maybe 1-2 MB more, needs the full tests and a console. Not worth trying: DT_RELR (`-z pack-relative-relocs`), the loader may not know it. A 349 KB closed-source client on 4pda is not comparable (it cannot contain all of Transmission, OpenSSL, curl and libevent).
+- **Check for a new version (done in 0.2, in the browser) and maybe update itself (not done).** The settings page shows "(update available N)" with a link to `releases/latest` next to the version: the browser of the person who opens the page asks `api.github.com/.../releases/latest` (CORS is open there), cached in `localStorage` for 6 h (1 h after a failure), automated browsers skip it unless `window.PS5_UPDATE_URL` is set (`tests/web/update_notice_test.js` uses a local stub); the console sends nothing. For an installation by the payload itself: the manager has no TLS today (curl and OpenSSL are linked into the daemon only), so asking `api.github.com/repos/freefelt/transmission_ps5/releases/latest` needs curl in the manager (about +1.5 MB) or a small helper. The location of the original `Transmission.elf` is not known to the process (the loader gets the file as a stream on port 9021); it is not needed: an update would be downloaded to `/data/Transmission/update/`, verified and sent to the loader at 127.0.0.1:9021 like the daemon is launched (the new manager stops the old one: `stop_other_instances`). Notification only (a bell entry, a line on the page, a link) is cheap and safe; the automatic installation runs code from the internet with root-like rights: SHA-256 of the release asset is not enough (the same channel), it needs a signature (Ed25519, the public key inside the ELF) and an explicit button. Decide the default of "check for updates" (privacy: the console's IP reaches GitHub).
+- **One page with tabs (Settings | Transmission, L1/R1).** Needs a probe of how L1/R1 arrive in the console browser first. Cheapest: the same tab strip on both pages (port 9092 and 9091), switching by navigation. A manager-side reverse proxy (`/transmission/*` to the local daemon) would make it one origin; it must keep the private-network check that the daemon does (the daemon would see 127.0.0.1) and the daemon may redirect the web pages of port 9091 to 9092 but not the RPC calls. A fully own UI on the RPC API is possible, big, and can come tab by tab.
 - **Downloading while the console is in rest mode** (like ps5-library, "Rest Mode"): downloading and unpacking continue only on the internal drive (a USB disk may vanish in rest mode); while there is work the payload keeps the CPU active, then the
   console sleeps by itself; the console's "stay connected" setting must be on. How the CPU is kept active is not stated (hypothesis: `sceSystemStateMgrRequestToKeepMainOnStandby` from `libSceSystemService`). Interesting but hard and dangerous.
 - **Protect the settings page**: it is open to the whole local network, and now it can power the console off or exit. Idea from ps5-library: pairing a phone or a computer with a code shown on the console.
@@ -431,5 +437,5 @@ fixes on a real exFAT disk beyond the maintainer's reports; other firmware versi
 - Read-only disks are not our concern (Transmission shows its own error). The main goal is to minimize the risk to the console; the rest is the maintainer's call.
 - A page for the whole network without a password is deliberate (`rpc-whitelist` limits it to private networks).
 - Python host tests stay (they drive the real daemon); the build and developer tools are shell and Node.
-- The version scheme was `0.0.N` until the first public release `0.1` (2026-10-30); `VERSION` now holds the released version, raise it for the next one (for example `0.1.1` or `0.2`) together with a `CHANGELOG.md` section.
+- The version scheme was `0.0.N` until the first public release `0.1` (2026-10-30); `VERSION` now holds `0.N` (the second number only: `0.2`, `0.3`, even `0.42`; no third number), raise it for the next change that goes to a console or a release, and write a `CHANGELOG.md` section for each release.
 - The license is GPL-3.0-or-later for the whole project.

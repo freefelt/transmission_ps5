@@ -660,6 +660,7 @@ inline constexpr int SysHangSeconds = 30;
 extern std::atomic<bool> g_ss_want_ka;
 void syssvc_main();
 void syssvc_watchdog(std::time_t now);
+void syssvc_resumed(std::time_t now);
 GameState syssvc_game_state();
 void game_pause_tick(std::time_t now);
 void keep_awake_tick(std::time_t);

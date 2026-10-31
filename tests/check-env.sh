@@ -31,7 +31,7 @@ PY
 done
 echo "== builds"
 [ -d "$ROOT/.deps/build/generated" ] && ok "generated files (after ./build.sh)" || warn ".deps/build/generated" "missing: run ./build.sh (the test build needs the web files)"
-[ -d "$ROOT/.deps/test/transmission-4.1.3" ] && ok "Transmission for the tests" || warn ".deps/test/transmission-4.1.3" "missing: tests/build/build-test-binaries.sh"
+[ -d "$ROOT/.deps/test/transmission-4.1.4" ] && ok "Transmission for the tests" || warn ".deps/test/transmission-4.1.4" "missing: tests/build/build-test-binaries.sh"
 [ -x "$ROOT/.deps/test/out/transmission_d_host" ] && [ -x "$ROOT/.deps/test/out/Transmission_mgr_host" ] && ok ".deps/test/out/*_host" || warn ".deps/test/out/*_host" "missing: tests/build/build-test-binaries.sh"
 echo; [ "$bad" = 0 ] && echo "The machine is ready." || echo "There are errors: fix them and run the check again."
 exit "$bad"

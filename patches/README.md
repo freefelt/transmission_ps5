@@ -1,6 +1,6 @@
 # Patches
 
-Everything in this folder changes or extends the **Transmission 4.1.3** sources. We never keep a modified copy of Transmission in the
+Everything in this folder changes or extends the **Transmission 4.1.4** sources. We never keep a modified copy of Transmission in the
 repository: the build downloads the original archive (pinned by version and SHA-256 in `scripts/build-elf.sh`), unpacks it and applies
 these patches, in order, on top of it. Our own code lives in `src/`; what is here is only what has to go *into* Transmission.
 
@@ -28,14 +28,15 @@ The PS5 build applies `ps5/` then `transmission/`; the test build applies `trans
 - `0002` to `0003`: **the download folders protection**. `torrent-add`, `torrent-set-location` and `session-set` only accept folders from the list kept by the manager; a torrent on a disk that is not connected is neither started nor verified. The logic itself is in the daemon wrapper (`src/daemon/guard.c`); the patches only add the calls.
 - `0004`, `0006`, `0007`, `0008`: **downloading to FAT disks** (exFAT and FAT32 have no sparse files, a write far from the start fills the gap with zeroes and hangs the console): sequential download, strict piece order, a 64 MiB window, and a per-torrent choice of the "USB disk fix".
 - `0005`: the torrent state is saved 20 s after changes instead of 6 minutes (a restart no longer returns a new torrent to the default folder), and the priority boost for the first and the last pieces of files is gone (it stretched files to their full size at once).
+- `0012`: the DHT looks up its bootstrap name (`dht.transmissionbt.com`) in a background thread, so a DNS server that does not answer cannot hold up the start of the daemon (the other lookups are limited by `src/daemon/dns.c`).
 - `0009` to `0011`: the RPC method `ps5_folders` (the folder list with the state of the disks, and their file systems) and the `torrent-get` field `ps5_in_folder`, used by the web interface.
 
 ### Adding or changing a patch
 
-1. Build once (`./build.sh`) so that the patched tree exists in `.deps/src/transmission-4.1.3`.
-2. Copy the files you are going to change next to themselves, change them in `.deps/src/transmission-4.1.3`, and make the diff with the paths relative to the tree:
+1. Build once (`./build.sh`) so that the patched tree exists in `.deps/src/transmission-4.1.4`.
+2. Copy the files you are going to change next to themselves, change them in `.deps/src/transmission-4.1.4`, and make the diff with the paths relative to the tree:
    ```sh
-   cd .deps/src/transmission-4.1.3
+   cd .deps/src/transmission-4.1.4
    cp libtransmission/torrent.cc /tmp/torrent.cc.orig        # before editing
    # ... edit libtransmission/torrent.cc ...
    diff -u --label a/libtransmission/torrent.cc --label b/libtransmission/torrent.cc /tmp/torrent.cc.orig libtransmission/torrent.cc > /tmp/new.patch

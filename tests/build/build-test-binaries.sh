@@ -45,7 +45,7 @@ compile_c_role "$OUT/obj-daemon" "-DPS5TM_DAEMON -DPS5TM_HOST_TEST" "$SRCDIR"/co
 objcopy --redefine-sym main=tr_daemon_main "$D/CMakeFiles/transmission-daemon.dir/daemon.cc.o" daemon_main.o
 LINK="$(cat "$D/CMakeFiles/transmission-daemon.dir/link.txt")"
 LINK="${LINK//CMakeFiles\/transmission-daemon.dir\/daemon.cc.o/$OUT/daemon_main.o}"
-LINK="${LINK//-o transmission-daemon/-o $OUT/transmission_d_host $OUT/obj-daemon/*.o $OUT/hoststub.o -Wl,--wrap=pthread_create -Wl,--wrap=fork -Wl,--wrap=execvp -Wl,--wrap=open -Wl,--wrap=close -Wl,--wrap=pwrite -Wl,--wrap=pread -Wl,--wrap=ftruncate -Wl,--wrap=rename -Wl,--wrap=mkdir -Wl,--wrap=unlink -Wl,--wrap=fsync -Wl,--wrap=stat -Wl,--wrap=lstat -Wl,--wrap=statvfs}"
+LINK="${LINK//-o transmission-daemon/-o $OUT/transmission_d_host $OUT/obj-daemon/*.o $OUT/hoststub.o -Wl,--wrap=getaddrinfo -Wl,--wrap=pthread_create -Wl,--wrap=fork -Wl,--wrap=execvp -Wl,--wrap=open -Wl,--wrap=close -Wl,--wrap=pwrite -Wl,--wrap=pread -Wl,--wrap=ftruncate -Wl,--wrap=rename -Wl,--wrap=mkdir -Wl,--wrap=unlink -Wl,--wrap=fsync -Wl,--wrap=stat -Wl,--wrap=lstat -Wl,--wrap=statvfs}"
 ( cd "$D" && eval "$LINK" ) 2>&1 | tail -3
 # the manager (the daemon is embedded)
 compile_c_role "$OUT/obj-manager" "-DPS5TM_MANAGER" "$SRCDIR"/common/*.c "$SRCDIR"/manager/*.c
@@ -53,7 +53,7 @@ compile_c_role "$OUT/obj-manager" "-DPS5TM_MANAGER" "$SRCDIR"/common/*.c "$SRCDI
 UI_OBJS=()
 for f in "$SRCDIR"/manager/*.cc; do
     o="ui_$(basename "$f" .cc).o"
-    clang++-18 -stdlib=libc++ -O2 -fPIC -std=gnu++17 -Wall -Wextra -I"$SRCDIR" -DPS5TM_TEST_INHERIT_NONBLOCK -DPS5TM_SPACE_CHECK_SECONDS=5 -I"$GEN" -DPS5TM_TR_VERSION='"4.1.3"' ${UI_FLAGS:-} -c "$f" -o "$o"
+    clang++-18 -stdlib=libc++ -O2 -fPIC -std=gnu++17 -Wall -Wextra -I"$SRCDIR" -DPS5TM_TEST_INHERIT_NONBLOCK -DPS5TM_SPACE_CHECK_SECONDS=5 -I"$GEN" -DPS5TM_TR_VERSION='"4.1.4"' ${UI_FLAGS:-} -c "$f" -o "$o"
     UI_OBJS+=("$o")
 done
 clang-18 -x assembler-with-cpp -DBLOB_PATH="\"$OUT/transmission_d_host\"" -c "$SRCDIR/asm/daemon_blob.S" -o daemon_blob.o

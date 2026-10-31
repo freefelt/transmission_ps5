@@ -5,13 +5,13 @@
 **English** · [Русский](README.ru.md)
 
 **An unofficial, open-source torrent client for the PS5 homebrew scene.**
-[Transmission](https://transmissionbt.com) 4.1.3 as one payload file. Download torrents straight to your console.
+[Transmission](https://transmissionbt.com) 4.1.4 as one payload file. Download torrents straight to your console.
 
 [![Release](https://img.shields.io/github/v/release/freefelt/transmission_ps5?label=release)](https://github.com/freefelt/transmission_ps5/releases/latest)
 [![Build](https://img.shields.io/github/actions/workflow/status/freefelt/transmission_ps5/build.yml?label=build)](https://github.com/freefelt/transmission_ps5/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)](LICENSE)
 [![PS5 firmware](https://img.shields.io/badge/PS5%20firmware-11.20%20tested%20%C2%B7%2010.01%20reported-brightgreen)](#-good-to-know)
-[![Transmission](https://img.shields.io/badge/Transmission-4.1.3-d33e2c)](https://transmissionbt.com)
+[![Transmission](https://img.shields.io/badge/Transmission-4.1.4-d33e2c)](https://transmissionbt.com)
 [![UI](https://img.shields.io/badge/UI-English%20%7C%20Русский-blue)](#-languages)
 [![Downloads](https://img.shields.io/github/downloads/freefelt/transmission_ps5/total)](https://github.com/freefelt/transmission_ps5/releases)
 [![Stars](https://img.shields.io/github/stars/freefelt/transmission_ps5?style=flat)](https://github.com/freefelt/transmission_ps5/stargazers)
@@ -20,8 +20,8 @@
 </div>
 
 > [!IMPORTANT]
-> This is the first public release (`0.1`), so expect rough edges. It is developed and tested on firmware **11.20**. On **10.01** a user reported that it starts and downloads
-> a torrent (not fully tested); other firmware versions are not verified yet. Your console must **already** be able to run payloads (an ELF loader that listens on port 9021). This
+> This project is under development, so expect rough edges. It is developed and tested on firmware **11.20**. On **10.01** a user reported that it starts and downloads
+> a torrent (not fully tested); there may be problems on **13.60**; other firmware versions are not verified yet. Your console must **already** be able to run payloads (an ELF loader that listens on port 9021). This
 > project does not jailbreak anything and does not help with it.
 
 > [!NOTE]
@@ -104,7 +104,7 @@ Without a folder Transmission **refuses** to add torrents. This is on purpose: i
 
 ### Update, stop, remove
 
-- **Update:** send the new file again (Step 3). Only the manager is replaced, a running Transmission is not interrupted.
+- **Update:** send the new file again (Step 3). The manager is replaced; a running Transmission is restarted by itself only if the new file brings a different Transmission build (the torrents are paused and resumed). When a newer release exists, the settings page shows a link next to the version.
 - **Stop completely:** on the settings page press the exit button in the top-left corner. Your torrents are paused and remembered.
 - **Remove:** restart the console and do not send the file again. If you installed the icon, press **Remove** in the icon section first. All data is in `/data/Transmission/`; delete that folder if you want to remove everything.
 
@@ -126,7 +126,7 @@ Without a folder Transmission **refuses** to add torrents. This is on purpose: i
 | Nothing happens after sleep | A known problem of some loaders: send the file again. |
 | The console freezes with a USB disk | Make sure the **USB disk fix** was on for that torrent, or use the M.2 SSD. |
 
-Still stuck? Open an [issue](https://github.com/freefelt/transmission_ps5/issues) and attach **Diagnostics → Daemon log** from the settings page.
+Still stuck? Open an [issue](https://github.com/freefelt/transmission_ps5/issues) and attach **Diagnostics → Diagnostic snapshot (everything at once)** from the settings page (if the page does not open, the file `/data/Transmission/logs/shim.log`).
 
 ## 🌍 Languages
 

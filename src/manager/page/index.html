@@ -77,14 +77,14 @@
 <div id="fdLimit" class="help" style="display:none;margin-top:10px">Limit reached: no more than 8 folders can be added on this page. Remove the ones you do not need. More can be specified in config.cfg (download_folder= lines).</div>
 </div>
 
-<h2>When all downloads finish</h2>
+<h2 id="asHead">When all downloads finish</h2>
 <div class="card">
 <div class="row" id="asRow"><label for="asArm">Perform an action when all downloads finish<span class="help" id="asNote"></span></label><input type="checkbox" id="asArm"></div>
 <div id="asBox" style="display:none">
 <div id="sleepForm"></div>
 <p><button id="asBtn" class="ok">Activate</button></p>
 <div class="help" id="asHint"></div>
-<div class="help">If all downloads are paused or removed, the action deactivates itself and the console does nothing. The activation is not saved: after sleep, power off or a manager restart it is off. If the console woke up (including when it went to sleep by itself on its own timer), the activation is cleared as well: turn it on again.</div>
+<div class="help" id="asInfo">The activation is not saved: after sleep, power off or a manager restart it is off.</div>
 </div>
 <div id="sleepCount" style="display:none"><b id="sleepLine"></b> <button id="sleepCancel">Cancel</button></div>
 </div>
@@ -95,9 +95,9 @@
 <div class="acc" id="accExpert"><button type="button" class="acc-head" id="accExpertBtn" aria-expanded="false"><span>Advanced settings</span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
 <div id="accExpertBody" style="display:none">
 <div class="card" id="expertForm"></div>
-<div id="expertIcon"><h3 class="sub">Icon on the “Media” tab</h3>
+<div id="expertIcon"><h3 class="sub" id="iconHead">Icon on the “Media” tab</h3>
 <div class="card"><div class="kv"><span>Status</span><span id="iconState">…</span></div>
-<div class="help">The icon opens this page in the PS5 browser. The app registers a separate short process, transmission_i.elf, with the system (the Payload Manager method): if it hangs, the manager and Transmission are not affected, and there will be no automatic retries. Installation takes a few seconds.</div>
+<div class="help" id="iconInfo">The icon opens this page in the PS5 browser.</div>
 <p><button class="alt" id="iconInstall">Install</button> <button class="alt" id="iconRemove">Remove</button><span id="iconMsg" class="msg"></span></p></div>
 </div>
 </div></div>
@@ -105,9 +105,9 @@
 <div id="accDiagBody" style="display:none">
 <div class="card">
 <div class="kv"><span>System service</span><span id="ssState">…</span></div>
-<div class="help">If Transmission “hangs” after sleep but this page works, press the buttons below and send the result. “Check Transmission” shows whether it accepts a local connection and responds. “Threads”: where the process threads stand (the wait column shows what a thread is waiting for). “Log”: the last lines of shim.log. “Drives”: which of /mnt/ext*, /mnt/usb* are connected (press with the drive and without it). “Mount points”: all mount points the manager sees (USB and M.2 first).</div>
+<div class="help" id="dgInfo">If Transmission “hangs” after sleep but this page works, press the snapshot button and send the result.</div>
 <div class="btnrow"><button id="dgAll">Diagnostic snapshot (everything at once)</button> <button class="alt" id="dgSelect">Select text</button></div>
-<div class="btnrow"><button class="alt" id="dgProbe">Check Transmission</button> <button class="alt" id="dgDisks">Drives</button> <button class="alt" id="dgMounts">Mount points</button> <button class="alt" id="dgThreads">Threads</button> <button class="alt" id="dgLog">Manager log</button> <button class="alt" id="dgDlog">Daemon log</button> <button class="alt" id="dgTlog">Transmission log</button></div>
+<div class="btnrow"><button class="alt" id="dgProbe">Check Transmission</button> <button class="alt" id="dgDisks">Drives</button> <button class="alt" id="dgMounts">Mount points</button> <button class="alt" id="dgThreads">Threads</button> <button class="alt" id="dgLog">Manager log</button> <button class="alt" id="dgLogFile">Manager log file</button> <button class="alt" id="dgDlog">Daemon log</button> <button class="alt" id="dgTlog">Transmission log</button></div>
 <pre id="dgOut" style="white-space:pre-wrap;word-break:break-all;background:#0f1319;border:1px solid #2a3340;border-radius:8px;padding:10px;font-size:12px;max-height:420px;overflow:auto;margin:6px 0 0"></pre>
 </div>
 </div></div>
@@ -117,7 +117,7 @@
 <p>Transmission icon: <a href="https://github.com/Zabriskije" target="_blank" rel="noopener">Zabriskije</a> (<a href="https://github.com/transmission/transmission/discussions/5479" target="_blank" rel="noopener">discussion thread</a>).</p>
 <p>Examples and sources that helped the development: <a href="https://github.com/ItsBlurf/BFpilot" target="_blank" rel="noopener">BFpilot</a> (icon registration through SceIpmi and SceAppInstUtil), <a href="https://github.com/itsPLK/ps5-payload-manager" target="_blank" rel="noopener">Payload Manager</a> (process names, icon installation, process memory), <a href="https://github.com/drakmor/shadowMountPlus" target="_blank" rel="noopener">ShadowMountPlus</a> (set of libraries), <a href="https://github.com/ps5-payload-dev/websrv" target="_blank" rel="noopener">websrv</a> and <a href="https://github.com/ps5-payload-dev/ftpsrv" target="_blank" rel="noopener">ftpsrv</a> (installing a shortcut app), <a href="https://github.com/ps5-payload-dev/sdk" target="_blank" rel="noopener">ps5-payload-sdk</a> (John Törnblom) and <a href="https://github.com/transmission/transmission" target="_blank" rel="noopener">Transmission</a>.</p>
 <p>Sleep and power off: <a href="https://github.com/ps5-linux/ps5-linux-loader" target="_blank" rel="noopener">ps5-linux-loader</a> (the way to enter rest mode), <a href="https://github.com/MasterPS0/PS5-Power-Payloads-Project" target="_blank" rel="noopener">PS5-Power-Payloads-Project</a> (power off and rest mode calls), <a href="https://github.com/deox1111/ps5-library" target="_blank" rel="noopener">ps5-library</a> (ideas about working in rest mode and device pairing), <a href="https://github.com/manos555555/PS5-Suite" target="_blank" rel="noopener">PS5-Suite</a> (a note about the official power off calls).</p>
-<p>Transmission 4.1.3 is distributed under the GPL license (version 2 or 3, your choice).</p>
+<p>Transmission is distributed under the GPL license (version 2 or 3, your choice).</p>
 <p>Icons on the Transmission page: monochrome <a href="https://github.com/lucide-icons/lucide" target="_blank" rel="noopener">Lucide</a> (ISC); color: toolbar buttons and the USB drive icon <a href="https://github.com/Richard9394/MingCute" target="_blank" rel="noopener">MingCute</a> (Apache-2.0), torrent icons <a href="https://github.com/microsoft/fluentui-emoji" target="_blank" rel="noopener">Fluent Emoji</a> (MIT), the internal drive <a href="https://github.com/microsoft/fluentui-system-icons" target="_blank" rel="noopener">Fluent UI System Icons</a> (MIT). The M.2 SSD icon was drawn for this project. The sets were taken through <a href="https://iconify.design" target="_blank" rel="noopener">Iconify</a>.</p>
 </div></div>
 </div></div>

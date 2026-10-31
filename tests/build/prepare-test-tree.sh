@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Prepares the Transmission source tree for the TEST build: unpacks the 4.1.3 archive and applies
+# Prepares the Transmission source tree for the TEST build: unpacks the 4.1.4 archive and applies
 # patches/transmission/*.patch (the same patches the PS5 build uses).
 # The tree is unpacked again whenever the patch set changes.
-#   tests/build/prepare-test-tree.sh                      # tree in .deps/test/transmission-4.1.3
-#   TR_SRC=/other/dir/transmission-4.1.3 tests/build/prepare-test-tree.sh
-# Needs the archive .deps/dl/transmission-4.1.3.tar.xz (downloaded by ./build.sh) or TR_TARBALL=/path/to/archive.
+#   tests/build/prepare-test-tree.sh                      # tree in .deps/test/transmission-4.1.4
+#   TR_SRC=/other/dir/transmission-4.1.4 tests/build/prepare-test-tree.sh
+# Needs the archive .deps/dl/transmission-4.1.4.tar.xz (downloaded by ./build.sh) or TR_TARBALL=/path/to/archive.
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/env.sh"
-TARBALL="${TR_TARBALL:-$REPO/.deps/dl/transmission-4.1.3.tar.xz}"
+TARBALL="${TR_TARBALL:-$REPO/.deps/dl/transmission-4.1.4.tar.xz}"
 PATCH_DIRS=("$REPO/patches/transmission")
 STAMP="$TR_SRC.patches"
 sha256_stdin() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 | awk '{print $1}'; else sha256sum | awk '{print $1}'; fi; }
@@ -17,7 +17,7 @@ if [ ! -d "$TR_SRC" ] || [ "$(cat "$STAMP" 2>/dev/null)" != "$PATCH_ID" ]; then
     rm -rf "$TR_SRC" "$STAMP"
     parent="$(dirname "$TR_SRC")"; mkdir -p "$parent"
     tmp="$(mktemp -d "$parent/.extract.XXXXXX")"; tar -xf "$TARBALL" -C "$tmp"
-    mv "$tmp/transmission-4.1.3" "$TR_SRC"; rmdir "$tmp"
+    mv "$tmp/transmission-4.1.4" "$TR_SRC"; rmdir "$tmp"
     echo "[test build] unpacked into $TR_SRC"
     for d in "${PATCH_DIRS[@]}"; do
         for p in "$d"/*.patch; do

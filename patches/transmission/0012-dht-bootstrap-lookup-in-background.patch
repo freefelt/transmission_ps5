@@ -1,0 +1,81 @@
+Subject: DHT: look up the bootstrap name in a background thread
+
+At the start of a session the DHT looked up "dht.transmissionbt.com" in the session thread and waited for the answer. When the DNS server of the network does
+not answer (a home network that lets only some DNS servers through), that took 30 seconds, and the RPC server of the daemon did not even start in that time.
+The lookup now runs in a thread of its own; the nodes it finds are taken over by the bootstrap timer, which looks again every second while the lookup is going on.
+
+--- a/libtransmission/tr-dht.cc
++++ b/libtransmission/tr-dht.cc
+@@ -13,9 +13,11 @@
+ #include <fstream>
+ #include <map>
+ #include <memory>
++#include <mutex>
+ #include <sstream>
+ #include <string>
+ #include <string_view>
++#include <thread>
+ #include <tuple> // std::tie()
+ #include <utility>
+ #include <vector>
+@@ -143,7 +145,16 @@
+         init_state(state_filename_);
+ 
+         get_nodes_from_bootstrap_file(tr_pathbuf{ mediator_.config_dir(), "/dht.bootstrap"sv }, bootstrap_queue_);
+-        get_nodes_from_name("dht.transmissionbt.com", tr_port::from_host(6881), bootstrap_queue_);
++        // ps5: the name is looked up in a thread of its own, the start must not wait for a DNS server that does not answer
++        std::thread{ [async = async_nodes_]()
++                     {
++                         auto nodes = Nodes{};
++                         get_nodes_from_name("dht.transmissionbt.com", tr_port::from_host(6881), nodes);
++                         auto const lock = std::scoped_lock{ async->mutex };
++                         async->nodes = std::move(nodes);
++                         async->done = true;
++                     } }
++            .detach();
+         bootstrap_timer_->start_single_shot(100ms);
+ 
+         mediator_.api().init(udp4_socket_, udp6_socket_, std::data(id_), nullptr);
+@@ -299,10 +310,26 @@
+ 
+     void on_bootstrap_timer()
+     {
++        // ps5: the nodes that the background lookup of the bootstrap name has found
++        auto lookup_pending = false;
++        {
++            auto const lock = std::scoped_lock{ async_nodes_->mutex };
++            lookup_pending = !async_nodes_->done;
++            for (auto const& node : async_nodes_->nodes)
++            {
++                bootstrap_queue_.push_back(node);
++            }
++            async_nodes_->nodes.clear();
++        }
++
+         // Since we don't want to abuse our bootstrap nodes,
+         // we don't ping them if the DHT is in a good state.
+         if (is_ready() || std::empty(bootstrap_queue_))
+         {
++            if (lookup_pending && !is_ready())
++            {
++                bootstrap_timer_->start_single_shot(1s); // the lookup is still going on: look again
++            }
+             return;
+         }
+ 
+@@ -614,6 +641,15 @@
+     Nodes bootstrap_queue_;
+     size_t n_bootstrapped_ = 0;
+ 
++    // ps5: filled by the thread that looks up the bootstrap name (it may outlive this object, hence the shared pointer)
++    struct AsyncNodes
++    {
++        std::mutex mutex;
++        Nodes nodes;
++        bool done = false;
++    };
++    std::shared_ptr<AsyncNodes> const async_nodes_ = std::make_shared<AsyncNodes>();
++
+     struct AnnounceInfo
+     {
+         time_t ipv4_announce_after = 0;

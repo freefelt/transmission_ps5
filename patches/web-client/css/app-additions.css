@@ -91,3 +91,5 @@ dialog.dialog-container.popup.ps5-out,#prefs-dialog.ps5-out{animation:ps5dlgout 
 #ps5-diskbar .ps5-meter i{display:block;height:100%;border-radius:3px;background-color:var(--color-progressbar-leech,#3b82f6)}
 #ps5-diskbar .ps5-disk.warn .ps5-meter i{background-color:#d9a21b}
 #ps5-diskbar .ps5-disk.crit .ps5-meter i{background-color:#e5484d}
+/* our icon (the one of the payload and of the tab) instead of the stock Transmission logo in the dialogs: Add torrents, Statistics, About, ... */
+.dialog-logo{background:transparent url('images/apple-touch-icon.png') top left no-repeat;background-size:contain}

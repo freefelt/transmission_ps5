@@ -33,6 +33,8 @@ function ben(v) { if (typeof v === "number") return Buffer.from(`i${v}e`); if (t
     check(`${label}: the tile of the exFAT disk says '${lang === "ru" ? "не рекомендуется (exFAT)" : "not recommended (exFAT)"}' without any question mark button; the M.2 tile has no such label`, !!usb && (lang === "ru" ? /не рекомендуется \(exFAT\)/ : /not recommended \(exFAT\)/).test(usb.text) && !usb.q && !!ssd && !/exFAT|рекомендуется|recommended/.test(ssd.text), JSON.stringify({ usb, ssd }));
     await page.keyboard.press("Escape"); await sleep(400);
   }
+  const logo = await page.evaluate(() => { const e = document.createElement("div"); e.className = "dialog-logo"; document.body.appendChild(e); const bg = getComputedStyle(e).backgroundImage; e.remove(); return bg; });
+  check("the logo in the dialogs is OUR icon (images/apple-touch-icon.png), not the stock Transmission logo drawn inline", /images\/apple-touch-icon\.png/.test(logo) && !/data:image\/svg/.test(logo), logo.slice(0, 120));
   check("no JavaScript errors in the web client", errors.length === 0, errors.join(";"));
   console.log(`\n${pass}/${pass + fail} inspector and dialog checks passed`); await browser.close(); process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log("crashed", e); process.exit(2); });

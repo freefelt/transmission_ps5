@@ -27,10 +27,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("NEW notification: only the new entry ('Третье…') gets the appearance animation, it slides in from the right and becomes fully opaque", cls.filter((c) => c[1]).length === 1 && /Третье/.test(cls.find((c) => c[1])[0]) && s[0].op < 0.95 && s[0].tx > 0 && s[1].op > s[0].op && fin.op === 1 && (fin.tf === "none" || fin.tf === "matrix(1, 0, 0, 1, 0, 0)"), JSON.stringify({ s, cls, fin }));
   await page.evaluate(() => document.body.click()); await sleep(200);
   // 3) warning popup (deleting a folder from the list)
-  s = await sample("[...document.querySelectorAll('.fd-row button')].find((b) => b.textContent === 'Удалить').click()", "#fdDelModal", [20, 70, 120, 450]);
+  s = await sample("document.querySelector('.fd-row .fd-del').click()", "#fdDelModal", [20, 70, 120, 450]);
   const card = await sample("1", "#fdDelModal .modal-card", [450]);
   check("ALERT WINDOW (delete a folder from the list): the dark overlay fades in smoothly", s[0].op < 0.9 && rising(s.map((x) => x.op)) && s.some((x) => x.op > 0.02 && x.op < 0.98) && s[3].op === 1 && s[0].disp === "flex", JSON.stringify(s));
-  const c2 = await sample("document.getElementById('fdDelCancel').click(); [...document.querySelectorAll('.fd-row button')].find((b) => b.textContent === 'Удалить').click()", "#fdDelModal .modal-card", [20, 70, 450]);
+  const c2 = await sample("document.getElementById('fdDelCancel').click(); document.querySelector('.fd-row .fd-del').click()", "#fdDelModal .modal-card", [20, 70, 450]);
   check("... and its card rises and grows into place (starts lower and slightly smaller)", c2[0].ty > 0 && c2[0].sc < 1 && c2[0].op < 0.95 && c2[2].op === 1 && c2[2].ty === 0 && c2[2].sc === 1, JSON.stringify(c2));
   s = await sample("document.getElementById('fdDelCancel').click()", "#fdDelModal", [20, 80, 130, 450]);
   const cc = await sample("1", "#fdDelModal .modal-card", [450]);
