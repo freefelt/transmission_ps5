@@ -1,10 +1,10 @@
 # Changelog
 
-All notable changes of the released versions (the next one is under `Unreleased`). The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
-the heading of every version is `## [<version>]`, and the text under it becomes the notes of the GitHub release (see `docs/releasing.md`).
-A version that is not released yet is written as `## [<version>] - Unreleased`; the release replaces `Unreleased` with the date.
+All notable changes of the released versions. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
+the heading of every version is `## [<version>]` (no date: the date of a release is on its GitHub Releases page), and the text under it
+becomes the notes of the GitHub release (see `docs/releasing.md`). A release only needs `VERSION` to be raised and the section to be written.
 
-## [0.4] - Unreleased
+## [0.4]
 
 ### Changes
 - The "Add Torrents" dialog works on iPad Safari again: the `.torrent` file filter (`accept`) is no longer set on touch devices, where the iOS Files picker showed `.torrent` files greyed out and they could not be selected. On a computer the `.torrent` filter is kept.
@@ -15,7 +15,7 @@ A version that is not released yet is written as `## [<version>] - Unreleased`; 
 ### Install
 [How to install Transmission for PS5](https://github.com/freefelt/Transmission-PS5#-install)
 
-## [0.3] - 2026-10-31
+## [0.3]
 
 ### Changes
 - Transmission no longer runs while the console is in rest mode. The console does not freeze the payload in rest mode (it kept running, and the daemon used a whole CPU core for ten minutes), so the manager now watches the power state of the console (the system's event flags, the same way as ShadowMountPlus): when the console goes to sleep or shuts down, Transmission is stopped cleanly (the torrents are paused and remembered), and it starts again, and resumes them, when the console is awake. The Diagnostics card shows the power state.
@@ -28,7 +28,7 @@ A version that is not released yet is written as `## [<version>] - Unreleased`; 
 ### Install
 [How to install Transmission for PS5](https://github.com/freefelt/Transmission-PS5#-install)
 
-## [0.2] - 2026-10-31
+## [0.2]
 
 ### Changes
 - Built with PS5 Payload SDK v0.45, the first line of SDKs that know firmware 13.60 (v0.41 does not know it, so 0.1 most probably did not start there); the diagnostics show the SDK version and the build time.
@@ -48,7 +48,7 @@ A version that is not released yet is written as `## [<version>] - Unreleased`; 
 ### Install
 [How to install Transmission for PS5](https://github.com/freefelt/Transmission-PS5#-install)
 
-## [0.1] - 2026-10-30
+## [0.1]
 
 The first public release.
 
