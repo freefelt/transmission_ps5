@@ -4,8 +4,10 @@ A release is made by GitHub Actions from a tag. The file that users download is 
 
 1. Make sure `main` is green (the workflows **Build** and **Tests**).
 2. Write the notes: in `CHANGELOG.md` the heading `## [<version>] - <date>` with the list of changes under it (this text becomes the notes of the release;
-   `scripts/release-notes.sh <version>` prints it, and the release fails if it is empty).
-3. Set the version in the `VERSION` file (for example `0.1`) and commit both files.
+   `scripts/release-notes.sh <version>` prints it, and the release fails if it is empty). While the version is not released yet the date is
+   `Unreleased` (`## [<version>] - Unreleased`); the release replaces it with the date. **The notes of every version end with the install
+   instructions link** `https://github.com/freefelt/Transmission-PS5#-install` (a `### Install` line; it is part of the GitHub release notes).
+3. Set the version in the `VERSION` file (for example `0.1`), replace `Unreleased` in the changelog heading with the release date, and commit both files.
 4. Tag the commit with the version itself (no `v` in front) and push the tag:
    ```sh
    git tag 0.1

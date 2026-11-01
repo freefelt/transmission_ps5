@@ -5,13 +5,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Transmission web interface against the real daemon (download folder guard): error texts, "Use temporary folder", the file picker on the console.
 (async () => {
   const browser = await puppeteer.launch({ executablePath: require("./chrome"), args: ["--no-sandbox", "--disable-gpu"], headless: "new" });
-  const open = async (ua) => { const page = await browser.newPage(); await page.setViewport({ width: 1280, height: 800 }); if (ua) await page.setUserAgent(ua); const dialogs = []; page.on("dialog", async (d) => { dialogs.push(d.message()); await d.accept(); }); const errors = []; page.on("pageerror", (e) => errors.push(e.message)); await page.goto("http://127.0.0.1:9091/transmission/web/", { waitUntil: "networkidle2" }); await sleep(2500); return { page, dialogs, errors }; };
-  const fileState = (page) => page.evaluate(() => { const i = document.querySelector('input[type="file"]'); const lab = i && i.id ? document.querySelector('label[for="' + i.id + '"]') : null; const url = document.querySelector('input[type="url"]'); const next = i && i.nextElementSibling; return { exists: !!i, shown: !!i && getComputedStyle(i).display !== "none" && i.getBoundingClientRect().width > 0, labelShown: !!lab && getComputedStyle(lab).display !== "none", urlShown: !!url && getComputedStyle(url).display !== "none", urlLabel: next ? next.textContent : "", cls: document.documentElement.className }; });
+  const open = async (ua, touch) => { const page = await browser.newPage(); if (touch) await page.evaluateOnNewDocument(() => { Object.defineProperty(navigator, "maxTouchPoints", { get: () => 5, configurable: true }); }); await page.setViewport({ width: 1280, height: 800 }); if (ua) await page.setUserAgent(ua); const dialogs = []; page.on("dialog", async (d) => { dialogs.push(d.message()); await d.accept(); }); const errors = []; page.on("pageerror", (e) => errors.push(e.message)); await page.goto("http://127.0.0.1:9091/transmission/web/", { waitUntil: "networkidle2" }); await sleep(2500); return { page, dialogs, errors }; };
+  const fileState = (page) => page.evaluate(() => { const i = document.querySelector('input[type="file"]'); const lab = i && i.id ? document.querySelector('label[for="' + i.id + '"]') : null; const url = document.querySelector('input[type="url"]'); const next = i && i.nextElementSibling; return { exists: !!i, shown: !!i && getComputedStyle(i).display !== "none" && i.getBoundingClientRect().width > 0, labelShown: !!lab && getComputedStyle(lab).display !== "none", urlShown: !!url && getComputedStyle(url).display !== "none", urlLabel: next ? next.textContent : "", cls: document.documentElement.className, accept: i ? i.getAttribute("accept") : null }; });
   // ---- ordinary browser
   let { page, dialogs, errors } = await open();
   await page.click("#toolbar-open"); await sleep(600);
   let f = await fileState(page);
-  check("a normal browser: the .torrent file chooser is shown, no ps5-console class", f.exists && f.shown && f.labelShown && !/ps5-console/.test(f.cls), JSON.stringify(f));
+  check("a normal browser: the .torrent file chooser is shown, no ps5-console class, the .torrent filter is kept", f.exists && f.shown && f.labelShown && !/ps5-console/.test(f.cls) && f.accept === ".torrent,application/x-bittorrent", JSON.stringify(f));
   await page.evaluate(() => { document.querySelector('input[type="url"]').value = "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567"; document.getElementById("add-dialog-folder-input").value = "/nowhere"; const b = [...document.querySelectorAll("#mainwin ~ * button, body > div button, .dialog-buttons button, button")].find((x) => /^\s*Add\s*$/.test(x.textContent)); if (b) b.click(); });
   await sleep(1800);
   const body = await page.evaluate(() => document.body.innerText);
@@ -39,6 +39,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("the PS5 browser (User-Agent has 'PlayStation'): the .torrent file chooser and its label are HIDDEN, class ps5-console is set", f.exists && !f.shown && !f.labelShown && /ps5-console/.test(f.cls), JSON.stringify(f));
   check("... the URL field stays and its label no longer says 'Or enter a URL' (it says 'Enter a URL or magnet link:')", f.urlShown && f.urlLabel === "Enter a URL or magnet link:", f.urlLabel);
   check("no JS errors in the PS5 browser case", errors.length === 0, errors.join(";"));
+  // ---- iPad Safari in desktop mode: the User-Agent is "Macintosh" (no iPad/iPhone), but the screen is a touch screen
+  const IPAD_DESKTOP_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15";
+  ({ page, dialogs, errors } = await open(IPAD_DESKTOP_UA, true));
+  await page.click("#toolbar-open"); await sleep(600);
+  f = await fileState(page);
+  check("iPad Safari (Macintosh UA + touch): the file input has NO accept filter (otherwise the iOS Files picker greys out .torrent files)", f.exists && f.shown && f.accept === null, JSON.stringify(f));
+  check("no JS errors in the iPad Safari case", errors.length === 0, errors.join(";"));
+  await page.close();
   // ---- adding a .torrent FILE that fails: one Transmission window, no second browser window (alert)
   const fs = require("fs"), tfile = "/tmp/ps5_test_upload.torrent";
   fs.writeFileSync(tfile, Buffer.concat([Buffer.from("d8:announce27:http://127.0.0.1:1/announce4:infod6:lengthi65536e4:name4:test12:piece lengthi65536e6:pieces20:"), Buffer.alloc(20, 7), Buffer.from("ee")]));

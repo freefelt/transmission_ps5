@@ -174,6 +174,12 @@ What we add (the main items):
 - Error texts: the web client reads `error.data.errorString`, the daemon (JSON-RPC 2.0) sends `error_string`; `ps5-compat.js` wraps
   `fetch` and shows an `alert` for `session_set`, `torrent_set_location` and the like. Duplicate alerts ("Error adding ...") are dropped.
   On the console (`PlayStation` in the user agent, class `ps5-console` on `<html>`) the file chooser of "Add torrents" is hidden.
+- **The `.torrent` filter of the file picker** (`accept=".torrent,application/x-bittorrent"` of the add dialog): `web_patch.pl` clears
+  `accept` on touch devices (`navigator.maxTouchPoints > 0`), because the iOS Files picker greys out `.torrent` files when the filter is
+  set and iPadOS in desktop mode reports a "Macintosh" UA. The 4.1.4 release archive ships a **prebuilt** `web/public_html/transmission-app.js`
+  that is older than its own `web/src` (it still has the 4.1.3 check), so our replacement is needed although the source already has the fix.
+  **On 4.1.5 (or a newer archive): check whether the released `transmission-app.js` already has `maxTouchPoints`; if it does, remove the
+  replacement from `web_patch.pl` and the iPad check from `tests/web/ui_console_test.js`.**
 - Look and motion: our own dialogs and menus with enter/exit animations (`Element.prototype.remove` is deferred while the exit animation
   runs: dialogs 150 ms, menus 120 ms, the inspector 240 ms), the inspector slides in, tab content slides left/right, rounded tabs and priority
   buttons, a file icon and bold folders in the file tree, the torrent path as plain text on the right of the size line.
@@ -443,4 +449,5 @@ fixes on a real exFAT disk beyond the maintainer's reports; other firmware versi
 - A page for the whole network without a password is deliberate (`rpc-whitelist` limits it to private networks).
 - Python host tests stay (they drive the real daemon); the build and developer tools are shell and Node.
 - The version scheme was `0.0.N` until the first public release `0.1` (2026-10-30); `VERSION` now holds `0.N` (the second number only: `0.2`, `0.3`, even `0.42`; no third number), raise it for the next change that goes to a console or a release, and write a `CHANGELOG.md` section for each release.
+- **Every `CHANGELOG.md` version section ends with the install instructions link** `https://github.com/freefelt/Transmission-PS5#-install` (it becomes the GitHub release notes; see `docs/releasing.md`). Do not drop it when writing a release. A version that is not released yet is `## [<version>] - Unreleased`; the release replaces `Unreleased` with the date.
 - The license is GPL-3.0-or-later for the whole project.

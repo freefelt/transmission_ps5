@@ -1,7 +1,19 @@
 # Changelog
 
-All notable changes of the released versions. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the heading of
-every version is `## [<version>]`, and the text under it becomes the notes of the GitHub release (see `docs/releasing.md`).
+All notable changes of the released versions (the next one is under `Unreleased`). The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
+the heading of every version is `## [<version>]`, and the text under it becomes the notes of the GitHub release (see `docs/releasing.md`).
+A version that is not released yet is written as `## [<version>] - Unreleased`; the release replaces `Unreleased` with the date.
+
+## [0.4] - Unreleased
+
+### Changes
+- The "Add Torrents" dialog works on iPad Safari again: the `.torrent` file filter (`accept`) is no longer set on touch devices, where the iOS Files picker showed `.torrent` files greyed out and they could not be selected. On a computer the `.torrent` filter is kept.
+
+### Notes
+- A web interface fix only; nothing else in the payload changed.
+
+### Install
+[How to install Transmission for PS5](https://github.com/freefelt/Transmission-PS5#-install)
 
 ## [0.3] - 2026-10-31
 
@@ -12,6 +24,9 @@ every version is `## [<version>]`, and the text under it becomes the notes of th
 
 ### Notes
 - Developed and tested on firmware 11.20: going to sleep, waking up, a power off and a reboot were watched there. Other firmware versions are not verified.
+
+### Install
+[How to install Transmission for PS5](https://github.com/freefelt/Transmission-PS5#-install)
 
 ## [0.2] - 2026-10-31
 
@@ -30,6 +45,9 @@ every version is `## [<version>]`, and the text under it becomes the notes of th
 ### Notes
 - Developed and tested on firmware 11.20. Firmware 13.60 is covered by the SDK now, but this release was not tried there. Other firmware versions are not verified.
 
+### Install
+[How to install Transmission for PS5](https://github.com/freefelt/Transmission-PS5#-install)
+
 ## [0.1] - 2026-10-30
 
 The first public release.
@@ -44,3 +62,6 @@ The first public release.
 
 ### Notes
 - Developed and tested on firmware 11.20. On 10.01 a user reported that it starts and downloads a torrent. Other firmware versions are not verified.
+
+### Install
+[How to install Transmission for PS5](https://github.com/freefelt/Transmission-PS5#-install)

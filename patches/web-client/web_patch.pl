@@ -94,6 +94,17 @@ my $n_row1 = ($appjs =~ s/render\(e,t,r\)\{let o=t\.isStopped\(\);r\.classList\.
 my $n_row2 = ($appjs =~ s/render\(e,t,r\)\{r\.classList\.toggle\("paused",t\.isStopped\(\)\);let\{labels:o,name:s/render(e,t,r){ps5Row(t,r);r.classList.toggle("paused",t.isStopped());let{labels:o,name:s/);
 ($n_row1 == 1 && $n_row2 == 1) or die "web_patch: no list row render in transmission-app.js (normal: $n_row1, compact: $n_row2)\n";
 ($n_down == 1 && $n_seed == 1 && $n_dir == 1) or die "web_patch: no speed lines in transmission-app.js (download: $n_down, seed: $n_seed)\n";
+# --- the ".torrent" filter of the file picker: the 4.1.4 archive ships a PREBUILT transmission-app.js that is OLDER than its own web/src ---
+# The 4.1.4 release archive contains web/src/open-dialog.js with the fix (is_apple_touch also matches "Macintosh" + navigator.maxTouchPoints),
+# but web/public_html/transmission-app.js was generated before that fix and still has the 4.1.3 check (/iPad|iPhone|iPod/ only). iPadOS in
+# desktop mode reports a "Macintosh" UA, so the filter accept=".torrent,application/x-bittorrent" is set and the iOS Files picker greys out
+# .torrent files: they cannot be selected. We patch the prebuilt bundle: no accept on a touch device (the .torrent filter stays on desktop,
+# where it is useful and works).
+# REMOVE THIS when moving to Transmission 4.1.5 (or a newer archive): first check whether the released transmission-app.js already has the
+# maxTouchPoints check (grep for "maxTouchPoints" in web/public_html/transmission-app.js); if it does, delete this replacement and the iPad
+# check in tests/web/ui_console_test.js.
+my $n_acc = ($appjs =~ s/He=!\(De&&Ee\)/He=!(De&&Ee)&&!(navigator.maxTouchPoints>0)/);
+$n_acc == 1 or die "web_patch: no 'accept' condition in transmission-app.js ($n_acc)\n";
 # ---- translation inside the client code (THIS BLOCK WAS ONCE PRODUCED by the web_i18n_data generator (removed, the dictionary now lives in locales/*.strings; check: tools/web-i18n-check.js) and by a /tmp rule script; for the list of texts and templates see locales/*.strings) ----
 # 1) exact replacements in the client code: texts with insertions become ps5t("template {1}", [values]) calls; every replacement must match EXACTLY once
 {
