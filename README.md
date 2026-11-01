@@ -7,14 +7,14 @@
 **An unofficial, open-source torrent client for the PS5 homebrew scene.**
 [Transmission](https://transmissionbt.com) 4.1.4 as one payload file. Download torrents straight to your console.
 
-[![Release](https://img.shields.io/github/v/release/freefelt/transmission_ps5?label=release)](https://github.com/freefelt/transmission_ps5/releases/latest)
-[![Build](https://img.shields.io/github/actions/workflow/status/freefelt/transmission_ps5/build.yml?label=build)](https://github.com/freefelt/transmission_ps5/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/freefelt/transmission_ps5?label=release)](https://github.com/freefelt/Transmission-PS5/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/freefelt/transmission_ps5/build.yml?label=build)](https://github.com/freefelt/Transmission-PS5/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)](LICENSE)
 [![PS5 firmware](https://img.shields.io/badge/PS5%20firmware-11.20%20tested%20%C2%B7%2010.01%20reported-brightgreen)](#-good-to-know)
 [![Transmission](https://img.shields.io/badge/Transmission-4.1.4-d33e2c)](https://transmissionbt.com)
 [![UI](https://img.shields.io/badge/UI-English%20%7C%20Русский-blue)](#-languages)
-[![Downloads](https://img.shields.io/github/downloads/freefelt/transmission_ps5/total)](https://github.com/freefelt/transmission_ps5/releases)
-[![Stars](https://img.shields.io/github/stars/freefelt/transmission_ps5?style=flat)](https://github.com/freefelt/transmission_ps5/stargazers)
+[![Downloads](https://img.shields.io/github/downloads/freefelt/transmission_ps5/total)](https://github.com/freefelt/Transmission-PS5/releases)
+[![Stars](https://img.shields.io/github/stars/freefelt/transmission_ps5?style=flat)](https://github.com/freefelt/Transmission-PS5/stargazers)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](#-contributing)
 
 </div>
@@ -59,10 +59,10 @@
 
 ### Step 1. Download the file
 
-👉 **[Open the latest release](https://github.com/freefelt/transmission_ps5/releases/latest)**
+👉 **[Open the latest release](https://github.com/freefelt/Transmission-PS5/releases/latest)**
 
 On that page scroll down to **Assets** and click the file **`Transmission-<version>.elf`**: it downloads to your computer.
-The version is always in the name of the file, so you can see which one you have. Older versions are on the [page with all releases](https://github.com/freefelt/transmission_ps5/releases).
+The version is always in the name of the file, so you can see which one you have. Older versions are on the [page with all releases](https://github.com/freefelt/Transmission-PS5/releases).
 
 ### Step 2. Find the address of your PS5
 
@@ -126,7 +126,7 @@ Without a folder Transmission **refuses** to add torrents. This is on purpose: i
 | Nothing happens after sleep | A known problem of some loaders: send the file again. |
 | The console freezes with a USB disk | Make sure the **USB disk fix** was on for that torrent, or use the M.2 SSD. |
 
-Still stuck? Open an [issue](https://github.com/freefelt/transmission_ps5/issues) and attach **Diagnostics → Diagnostic snapshot (everything at once)** from the settings page (if the page does not open, the file `/data/Transmission/logs/shim.log`).
+Still stuck? Open an [issue](https://github.com/freefelt/Transmission-PS5/issues) and attach **Diagnostics → Diagnostic snapshot (everything at once)** from the settings page (if the page does not open, the file `/data/Transmission/logs/shim.log`).
 
 ## 🌍 Languages
 

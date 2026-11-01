@@ -170,7 +170,7 @@ if(!ss.ready){e.textContent='loading or not available'+(ss.error?': '+ss.error:'
 e.textContent='running; game: '+(ss.game_state==='none'?'None':ss.game_state==='on_screen'?'on screen':ss.game_state==='minimised'?'running but minimised':'Launched')+(ss.title?' ('+ss.title+')':'')+'; console language: '+(ss.system_lang<0?'Unknown':(ss.system_lang===8?'Russian':'code '+ss.system_lang))+'; keep awake: '+(ss.keepawake?'On':'Off')}
 /* A newer release: the browser (not the console) asks GitHub once in a few hours, only to show a link next to the version. Nothing is sent from the console, nothing is
    installed. Automated browsers (jsdom, headless Chrome) do not ask unless a test sets window.PS5_UPDATE_URL. */
-var UPD_URL=window.PS5_UPDATE_URL||'https://api.github.com/repos/freefelt/transmission_ps5/releases/latest',UPD_PAGE='https://github.com/freefelt/transmission_ps5/releases/latest',updTag='';
+var UPD_URL=window.PS5_UPDATE_URL||'https://api.github.com/repos/freefelt/transmission_ps5/releases/latest',UPD_PAGE='https://github.com/freefelt/Transmission-PS5/releases/latest',updTag='';
 function verParts(v){return String(v).replace(/^v/i,'').split('.').map(function(x){return parseInt(x,10)||0})}
 function verNewer(a,b){var x=verParts(a),y=verParts(b);for(var i=0;i<Math.max(x.length,y.length);i++){var p=x[i]||0,q=y[i]||0;if(p!==q)return p>q}return false}
 function updStore(tag){updTag=tag;try{localStorage.setItem('ps5tm_upd',JSON.stringify({t:Date.now(),tag:tag}))}catch(e){}}

@@ -7,14 +7,14 @@
 **Неофициальный торрент-клиент с открытым кодом для хоумбрю-сцены PS5.**
 [Transmission](https://transmissionbt.com) 4.1.4 в одном файле-пейлоаде. Качайте торренты прямо на консоль.
 
-[![Релиз](https://img.shields.io/github/v/release/freefelt/transmission_ps5?label=%D1%80%D0%B5%D0%BB%D0%B8%D0%B7)](https://github.com/freefelt/transmission_ps5/releases/latest)
-[![Сборка](https://img.shields.io/github/actions/workflow/status/freefelt/transmission_ps5/build.yml?label=%D1%81%D0%B1%D0%BE%D1%80%D0%BA%D0%B0)](https://github.com/freefelt/transmission_ps5/actions/workflows/build.yml)
+[![Релиз](https://img.shields.io/github/v/release/freefelt/transmission_ps5?label=%D1%80%D0%B5%D0%BB%D0%B8%D0%B7)](https://github.com/freefelt/Transmission-PS5/releases/latest)
+[![Сборка](https://img.shields.io/github/actions/workflow/status/freefelt/transmission_ps5/build.yml?label=%D1%81%D0%B1%D0%BE%D1%80%D0%BA%D0%B0)](https://github.com/freefelt/Transmission-PS5/actions/workflows/build.yml)
 [![Лицензия](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-GPL--3.0--or--later-green)](LICENSE)
 [![Прошивка PS5](https://img.shields.io/badge/%D0%BF%D1%80%D0%BE%D1%88%D0%B8%D0%B2%D0%BA%D0%B0%20PS5-11.20%20%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B5%D0%BD%D0%B0%20%C2%B7%2010.01%20%D1%81%D0%BE%D0%BE%D0%B1%D1%89%D0%B8%D0%BB%D0%B8-brightgreen)](#-полезно-знать)
 [![Transmission](https://img.shields.io/badge/Transmission-4.1.4-d33e2c)](https://transmissionbt.com)
 [![Интерфейс](https://img.shields.io/badge/%D0%B8%D0%BD%D1%82%D0%B5%D1%80%D1%84%D0%B5%D0%B9%D1%81-English%20%7C%20%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-blue)](#-языки)
-[![Скачиваний](https://img.shields.io/github/downloads/freefelt/transmission_ps5/total?label=%D1%81%D0%BA%D0%B0%D1%87%D0%B8%D0%B2%D0%B0%D0%BD%D0%B8%D0%B9)](https://github.com/freefelt/transmission_ps5/releases)
-[![Звёзды](https://img.shields.io/github/stars/freefelt/transmission_ps5?style=flat&label=%D0%B7%D0%B2%D1%91%D0%B7%D0%B4%D1%8B)](https://github.com/freefelt/transmission_ps5/stargazers)
+[![Скачиваний](https://img.shields.io/github/downloads/freefelt/transmission_ps5/total?label=%D1%81%D0%BA%D0%B0%D1%87%D0%B8%D0%B2%D0%B0%D0%BD%D0%B8%D0%B9)](https://github.com/freefelt/Transmission-PS5/releases)
+[![Звёзды](https://img.shields.io/github/stars/freefelt/transmission_ps5?style=flat&label=%D0%B7%D0%B2%D1%91%D0%B7%D0%B4%D1%8B)](https://github.com/freefelt/Transmission-PS5/stargazers)
 [![PR приветствуются](https://img.shields.io/badge/PR-%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82%D1%81%D1%82%D0%B2%D1%83%D1%8E%D1%82%D1%81%D1%8F-brightgreen)](#-как-помочь-проекту)
 
 </div>
@@ -59,10 +59,10 @@
 
 ### Шаг 1. Скачайте файл
 
-👉 **[Открыть последний релиз](https://github.com/freefelt/transmission_ps5/releases/latest)**
+👉 **[Открыть последний релиз](https://github.com/freefelt/Transmission-PS5/releases/latest)**
 
 На открывшейся странице прокрутите вниз до блока **Assets** и нажмите на файл **`Transmission-<версия>.elf`**: он скачается на ваш компьютер.
-Версия всегда есть в имени файла, так что сразу видно, какая она. Старые версии лежат на [странице всех релизов](https://github.com/freefelt/transmission_ps5/releases).
+Версия всегда есть в имени файла, так что сразу видно, какая она. Старые версии лежат на [странице всех релизов](https://github.com/freefelt/Transmission-PS5/releases).
 
 ### Шаг 2. Узнайте адрес вашей PS5
 
@@ -126,7 +126,7 @@ nc -q0 192.168.1.42 9021 < Transmission-<версия>.elf
 | После сна ничего не происходит | Известная проблема некоторых загрузчиков: отправьте файл ещё раз. |
 | Консоль зависает с USB-диском | Убедитесь, что для этого торрента был включён **фикс для USB дисков**, или используйте M.2 SSD. |
 
-Всё ещё не получается? Создайте [issue](https://github.com/freefelt/transmission_ps5/issues) и приложите **Диагностика → Снимок для диагностики (всё сразу)** со страницы настроек (если страница не открывается, файл `/data/Transmission/logs/shim.log`).
+Всё ещё не получается? Создайте [issue](https://github.com/freefelt/Transmission-PS5/issues) и приложите **Диагностика → Снимок для диагностики (всё сразу)** со страницы настроек (если страница не открывается, файл `/data/Transmission/logs/shim.log`).
 
 ## 🌍 Языки
 
